@@ -1,66 +1,59 @@
 package cmd
 
 import (
-	"flag"
+	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
 	"fmt"
+	"github.com/spf13/cobra"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 )
 
-type AddCommand struct {
-	flagSet *flag.FlagSet
-	urls URLs
-}
-
-func NewAddCommand() *AddCommand {
-	cmd := &AddCommand{
-		flagSet: flag.NewFlagSet("add", flag.ExitOnError),
+func init() {
+	var addCmd = &cobra.Command{
+		Use:   "add",
+		Short: "add links to store",
+		Run: func(cmd *cobra.Command, args []string) {
+			add(args)
+		},
 	}
-	cmd.flagSet.Var(&cmd.urls, "urls", "comma separated list of urls to store")
-	return cmd
+	rootCmd.AddCommand(addCmd)
 }
 
-func (cmd *AddCommand) Run() {
-	for _, u := range cmd.urls {
+func add(args []string) {
+	urls, err := toURLS(args)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, u := range urls {
 		body, err := download(u)
 		if err != nil {
 			fmt.Println(err)
-			continue
+			os.Exit(1)
 		}
 		err = write(compress(body), u)
 		if err != nil {
 			fmt.Println(err)
+			os.Exit(1)
 		}
 	}
 }
 
-func (cmd *AddCommand) ParseArgs(args []string) error {
-	// TODO https://stackoverflow.com/questions/31786215/can-command-line-flags-in-go-be-set-to-mandatory
-	return cmd.flagSet.Parse(args)
-}
-
-func (cmd *AddCommand) Name() string  {
-	return cmd.flagSet.Name()
-}
-
-type URLs []url.URL
-
-func (u *URLs) String() string {
-	return fmt.Sprint(*u)
-}
-
-func (u *URLs) Set(s string) error {
-	for _, val := range strings.Split(s, ",") {
+func toURLS(urls []string) ([]url.URL, error) {
+	res := make([]url.URL, 0, len(urls))
+	for _, val := range urls {
 		v, err := url.Parse(val) // FIXME doesnt actually validate urls
 		if err != nil {
-			return err
+			return nil, err
 		}
-		*u = append(*u, *v)
+		res = append(res, *v)
 	}
-	return nil
+	return res, nil
 }
 
 func download(u url.URL) ([]byte, error) {
@@ -80,19 +73,44 @@ func download(u url.URL) ([]byte, error) {
 }
 
 func write(b []byte, u url.URL) error {
-	// TODO use sha1 of url.String() for filename
-	// TODO need to make .bobolink dir
-	home, err := os.UserHomeDir()
+	p, err := makePath(u)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(home + "/.bobolink/" + u.Host, b, 0666)
+
+	err = ioutil.WriteFile(p, b, 0666)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+func makePath(u url.URL) (string, error) {
+	// TODO need to make .bobolink dir
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	h := sha256.New()
+	h.Write([]byte(u.String()))
+
+	return home + "/.bobolink/" + u.Host + fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
 func compress(b []byte) []byte {
-	return b
+	var buff bytes.Buffer
+	zw := gzip.NewWriter(&buff) // TODO add flag for compression level
+
+	if _, err := zw.Write(b); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err := zw.Close(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	return buff.Bytes()
 }

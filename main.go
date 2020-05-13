@@ -1,13 +1,7 @@
 package main
 
-import (
-	"github.com/jtanza/bobolink/cmd"
-	"os"
-)
+import "github.com/jtanza/bobolink/cmd"
 
 func main() {
-	cli := cmd.NewCli([]cmd.Command{
-		cmd.NewAddCommand(),
-	})
-	cli.Parse(os.Args)
+	cmd.Execute()
 }
