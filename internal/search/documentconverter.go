@@ -2,17 +2,18 @@ package search
 
 import (
 	"bytes"
+	"fmt"
 	"golang.org/x/net/html"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 )
 
-type Document struct {
-	Id string
-	Body string
-	URL string
-}
+const (
+	Id = "Id"
+	Body = "Body"
+	URL = "URL"
+)
 
 func Convert(resources []string) ([]Document, error) {
 	urls, err := toURLS(resources)
@@ -72,4 +73,14 @@ func extractText(body []byte) []byte {
 		}
 		res = append(res, tok.Text()...)
 	}
+}
+
+type Document struct {
+	Id string
+	Body string
+	URL string
+}
+
+func (d Document) String() string {
+	return fmt.Sprintf("URL:%v\nMatch:%v\n", d.URL, d.Body)
 }
