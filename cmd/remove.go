@@ -8,13 +8,14 @@ import (
 
 func init() {
 	var addCmd = &cobra.Command{
-		Use:   "add",
-		Short: "adds urls to store",
+		Use:   "remove",
+		Short: "delete urls from store",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := search.AddResources(args); err != nil {
+			if err := search.Delete(args); err != nil {
 				log.Fatal(err)
 			}
 		},
 	}
 	rootCmd.AddCommand(addCmd)
 }
+

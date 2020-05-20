@@ -14,9 +14,9 @@ func init() {
 		Short: "search urls",
 		Run: func(cmd *cobra.Command, args []string) {
 			if All {
-				fmt.Println(findAll())
+				findAll()
 			} else {
-				fmt.Println(searchQuery(args[0]))
+				searchQuery(args[0])
 			}
 		},
 	}
@@ -24,11 +24,14 @@ func init() {
 	rootCmd.AddCommand(findCmd)
 }
 
-func searchQuery(query string) []search.Document {
-	return search.Query(query)
+func searchQuery(query string) {
+	for _, d := range search.Query(query) {
+		fmt.Println(d)
+	}
 }
 
-func findAll() []search.Document {
-	return search.MatchAll()
+func findAll() {
+	for _, d := range search.MatchAll() {
+		fmt.Println(d.URL)
+	}
 }
-

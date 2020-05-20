@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 const (
@@ -14,6 +15,8 @@ const (
 	Body = "Body"
 	URL = "URL"
 )
+
+var script = []byte("script")
 
 func Convert(resources []string) ([]Document, error) {
 	urls, err := toURLS(resources)
@@ -36,8 +39,8 @@ func Convert(resources []string) ([]Document, error) {
 func ToDocument(body []byte, u url.URL) Document {
 	return Document{
 		Id:   u.String(),
-		Body: string(extractText(body)),
-		URL: u.String(),
+		Body: extractText(body),
+		URL:  u.String(),
 	}
 }
 
@@ -63,16 +66,28 @@ func download(u url.URL) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-func extractText(body []byte) []byte {
-	tok := html.NewTokenizer(bytes.NewReader(body))
-	res := make([]byte, 0)
+func extractText(body []byte) string {
+	tz := html.NewTokenizer(bytes.NewReader(body))
+	text := make([]byte, 0)
+
 	for {
-		t := tok.Next()
+		t := tz.Next()
 		if t == html.ErrorToken {
-			return res
+			break
 		}
-		res = append(res, tok.Text()...)
+
+		if shouldSkip(tz, t) {
+			t = tz.Next()
+			continue
+		}
+		text = append(text, tz.Text()...)
 	}
+	return strings.Join(strings.Fields(string(text)), " ")
+}
+
+func shouldSkip(tz *html.Tokenizer, t html.TokenType) bool {
+	tag, _ := tz.TagName()
+	return bytes.Compare(tag, script) == 0 || t == html.CommentToken || t == html.DoctypeToken
 }
 
 type Document struct {
@@ -82,5 +97,5 @@ type Document struct {
 }
 
 func (d Document) String() string {
-	return fmt.Sprintf("URL:%v\nMatch:%v\n", d.URL, d.Body)
+	return fmt.Sprintf("URL: %v\nMatch: %v\n", d.URL, d.Body)
 }

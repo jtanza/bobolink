@@ -12,31 +12,30 @@ const indexPath = "/tmp/search.bleve" // TODO
 
 var index = getIndexAt(indexPath) // TODO Close()?
 
-func AddResources(resources []string) {
+func AddResources(resources []string) error {
 	docs, err := Convert(resources)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	for _, d := range docs {
-		AddDocument(d)
-	}
-}
 
-func AddDocument(d Document) {
-	if err := index.Index(d.Id, d); err != nil {
-		panic(err)
+	b := index.NewBatch()
+	for _, d := range docs {
+		if err := b.Index(d.Id, d); err != nil {
+			log.Fatal(err)
+		}
 	}
+	return index.Batch(b)
 }
 
 func Query(q string) []Document {
-	mq := bleve.NewMatchQuery(q)
+	mq := bleve.NewMatchQuery(q) // TODO Regex?
 	r := bleve.NewSearchRequest(mq)
-	r.Highlight = bleve.NewHighlight() // TODO add ansi highlight
 
+	r.Highlight = bleve.NewHighlight() // TODO add ansi highlight
 	r.Highlight.AddField(Body)
+
 	r.Fields = append(r.Fields, Body)
 	r.Fields = append(r.Fields, URL)
-	r.Fields = append(r.Fields, Id)
 
 	return query(r)
 }
@@ -44,11 +43,17 @@ func Query(q string) []Document {
 func MatchAll() []Document {
 	q := bleve.NewMatchAllQuery()
 	r := bleve.NewSearchRequest(q)
-
-	r.Fields = append(r.Fields, Id)
 	r.Fields = append(r.Fields, URL)
 
 	return query(r)
+}
+
+func Delete(resources []string) error {
+	b := index.NewBatch()
+	for _, url := range resources {
+		b.Delete(url)
+	}
+	return index.Batch(b)
 }
 
 func query(r *bleve.SearchRequest) []Document {
@@ -62,8 +67,8 @@ func query(r *bleve.SearchRequest) []Document {
 		for _, h := range search.Hits {
 			doc := Document{
 				Id:   fmt.Sprint(h.Fields[Id]),
-				Body: fmt.Sprint(strings.Join(h.Fragments[Body], "\n")),
 				URL:  fmt.Sprint(h.Fields[URL]),
+				Body: fmt.Sprint(strings.Join(h.Fragments[Body], " ")),
 			}
 			res = append(res, doc)
 		}
