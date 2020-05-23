@@ -11,7 +11,7 @@ func init() {
 		Use:   "add",
 		Short: "adds urls to store",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := search.AddResources(args); err != nil {
+			if _, err := search.AddResources(args); err != nil {
 				log.Fatal(err)
 			}
 		},

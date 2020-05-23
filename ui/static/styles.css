@@ -1,0 +1,92 @@
+body {
+    font-family: "Lucida Console", Monaco, monospace
+}
+a {
+    color:blue;
+}
+ul {
+    list-style: none outside none;
+    padding: 0;
+}
+li {
+    margin:13px 0;
+    font-size: 13px;
+}
+li a {
+    font-size: 15px;
+}
+textarea#manage {
+    padding: 5px;
+    box-sizing: border-box;
+}
+.content {
+    width: 50%;
+    margin: 0 auto;
+}
+.title {
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+.title a {
+    color: black;
+    text-decoration: none;
+}
+.header {
+    margin-top: 50px;
+    margin-bottom: 90px;
+    font-size: 30px;
+}
+.menu {
+    font-size: 15px;
+    margin: 10px 0;
+}
+.main {
+    margin: 50px 0;
+    font-size: 15px;
+}
+.search {
+    height: 15px;
+    width: 300px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    border-bottom: 1px dashed black;
+    color: black;
+    padding: 2px;
+    font-size: 13px;
+}
+#search-results {
+    margin: 40px 0;
+}
+input::placeholder, select, textarea {
+    color:black;
+    font-family: "Lucida Console", Monaco, monospace;
+}
+input[type="text"] {
+    font-family: "Lucida Console", Monaco, monospace;
+}
+.search-button {
+    background-color: white;
+    color: black;
+    border: 1px solid black;
+}
+.search-button:hover {
+    background-color: black;
+    color: white;
+}
+.search-button:focus {
+    outline: none;
+    box-shadow: none;
+}
+.footer {
+    margin-top:50px;
+    opacity: .5;
+    font-size: 13px
+}
+.manage-links {
+    margin-bottom: 5px;
+}
+#added-title {
+    margin-bottom: 30px;
+    display: none;
+}

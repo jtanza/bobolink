@@ -1,0 +1,29 @@
+{{define "base"}}
+<!doctype html>
+<html lang="en">
+<head>
+    <title>bobolink</title>
+    <link rel="stylesheet" href="../static/styles.css">
+</head>
+<body>
+<div class="content">
+    <header class="header">
+        <div class="title">
+            <a href="/">Bobolink</a>
+        </div>
+        <nav class="menu">
+            <a href="/">Search</a>
+            <a href="/manage">Add</a>
+            <a href="/manage">Delete</a>
+        </nav>
+    </header>
+    {{template "main" .}}
+    <footer class="footer">
+        <a href="/html/">Info</a>
+        <a href="https://github.com/jtanza/bobolink">GitHub</a>
+    </footer>
+</div>
+<script src="../static/script.js"></script>
+</body>
+</html>
+{{end}}

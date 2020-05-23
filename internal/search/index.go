@@ -12,10 +12,10 @@ const indexPath = "/tmp/search.bleve" // TODO
 
 var index = getIndexAt(indexPath) // TODO Close()?
 
-func AddResources(resources []string) error {
+func AddResources(resources []string) ([]Document, error) {
 	docs, err := Convert(resources)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	b := index.NewBatch()
@@ -24,7 +24,11 @@ func AddResources(resources []string) error {
 			log.Fatal(err)
 		}
 	}
-	return index.Batch(b)
+	if err := index.Batch(b); err != nil {
+		return nil, err
+	}
+
+	return docs, nil
 }
 
 func Query(q string) []Document {

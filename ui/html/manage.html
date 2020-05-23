@@ -1,0 +1,15 @@
+{{template "base" .}}
+{{define "main"}}
+    <div id="add-form">
+        <div class="main">
+            <p>Add links to your store below.</p>
+            <p>Consecutive URLs should be whitespace separated.</p>
+        </div>
+        <div class="manage-links">
+            <textarea id="manage" rows="10" cols="58" placeholder="http://norvig.com/chomsky.html"></textarea>
+        </div>
+        <button type="submit" onclick="add()" class="search-button">submit</button>
+    </div>
+    <h3 id="added-title">Successfully Added:</h3>
+    <div id="manage-results"></div>
+{{end}}
