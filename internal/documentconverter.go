@@ -1,10 +1,11 @@
-package search
+package internal
 
 import (
 	"bytes"
 	"fmt"
 	"golang.org/x/net/html"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,7 +17,21 @@ const (
 	URL = "URL"
 )
 
-var script = []byte("script")
+type Document struct {
+	Id string
+	Body string
+	URL string
+}
+
+func (d Document) String() string {
+	return fmt.Sprintf("URL: %v\nMatch: %v\n", d.URL, d.Body)
+}
+
+func (d Document) EscapeBody() string {
+	s := strings.ReplaceAll(html.EscapeString(d.Body), "&lt;mark&gt;", "<mark>")
+	return strings.ReplaceAll(s, "&lt;/mark&gt", "</mark>")
+
+}
 
 func Convert(resources []string) ([]Document, error) {
 	urls, err := toURLS(resources)
@@ -61,7 +76,12 @@ func download(u url.URL) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	return ioutil.ReadAll(resp.Body)
 }
@@ -87,15 +107,5 @@ func extractText(body []byte) string {
 
 func shouldSkip(tz *html.Tokenizer, t html.TokenType) bool {
 	tag, _ := tz.TagName()
-	return bytes.Compare(tag, script) == 0 || t == html.CommentToken || t == html.DoctypeToken
-}
-
-type Document struct {
-	Id string
-	Body string
-	URL string
-}
-
-func (d Document) String() string {
-	return fmt.Sprintf("URL: %v\nMatch: %v\n", d.URL, d.Body)
+	return bytes.Compare(tag, []byte("script")) == 0 || t == html.CommentToken || t == html.DoctypeToken
 }

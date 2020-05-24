@@ -46,12 +46,12 @@ function search() {
         "Content-Type":"application/json;charset=UTF-8",
         "Accept": "text/html"
     }
-    const query = {"query": document.getElementById("resource-search").value}
-    client.postWithHeaders("links/find", JSON.stringify(query), headers, function(resp) {
-        // TODO handle empty search
-        document.getElementById("search-results").innerHTML = resp;
+    const query = document.getElementById("resource-search").value
+    const path = query === ".*" ? "links/all" : "links/find"
+    client.postWithHeaders(path, JSON.stringify({"query": query}), headers, function(resp) {
+        document.getElementById("search-results").innerHTML = resp ? resp : "No Matches.";
     }, function (resp) {
-        console.log(resp); // TODO
+        document.getElementById("search-results").innerText = resp.responseText
     });
 }
 
@@ -60,15 +60,15 @@ function add() {
         "Content-Type":"application/json;charset=UTF-8",
         "Accept": "text/html"
     }
-    const textarea = document.getElementById("manage").value;
-    const urls =  {"urls": textarea.split(" ")}
-    client.putWithHeaders("links/add", JSON.stringify(urls), headers, function(resp) {
-        // TODO handle empty search
+    const urls = document.getElementById("manage").value;
+    client.putWithHeaders("links/add", JSON.stringify({"urls": urls.trim().split(" ")}), headers, function(resp) {
         document.getElementById("add-form").style.display = "none"
-        document.getElementById("added-title").style.display = "block"
+        document.getElementById("added-title").innerText = "Successfully Added:"
         document.getElementById("manage-results").innerHTML = resp;
     }, function (resp) {
-        console.log(resp); // TODO
+        document.getElementById("add-form").style.display = "none"
+        document.getElementById("added-title").innerText = "Error:"
+        document.getElementById("manage-results").innerHTML = resp.responseText;
     });
 }
 

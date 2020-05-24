@@ -1,4 +1,4 @@
-package search
+package internal
 
 import (
 	"net/url"
@@ -35,6 +35,15 @@ func TestToDocument_comments(t *testing.T) {
 	}
 
 	compareStrings(ToDocument(page, *u).Body, "Compare-and-swap - Wikipedia", t)
+}
+
+func TestDocument_EscapeBody(t *testing.T) {
+	d := Document{
+		Body: "Disjoint <mark>Set</mark> Union (Union Find) <iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-PBHB…</li>",
+	}
+
+	s := d.EscapeBody()
+	compareStrings("Disjoint <mark>Set</mark>; Union (Union Find) &lt;iframe src=&#34;https://www.googletagmanager.com/ns.html?id=GTM-PBHB…&lt;/li&gt;", s, t)
 }
 
 func compareStrings(got string, want string, t *testing.T) {

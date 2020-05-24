@@ -3,7 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jtanza/bobolink/internal/search"
+	"github.com/blevesearch/bleve/analysis/char/html"
+	"github.com/jtanza/bobolink/internal"
 	"github.com/spf13/cobra"
 	"html/template"
 	"io"
@@ -45,8 +46,9 @@ type URLs struct {
 type SearchQuery struct {
 	Query string `json:"query"`
 }
-type DocumentWithHost struct {
-	Document search.Document
+type TemplateDocument struct {
+	Body template.HTML
+	URL string
 	Host string
 }
 
@@ -54,38 +56,44 @@ func add(w http.ResponseWriter, r *http.Request) {
 	var u URLs
 	unmarshall(r.Body, &u)
 
-	added, err := search.AddResources(u.URLs)
+	added, err := internal.AddResources(u.URLs)
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
 	}
 
-	toResponse(w, r, added, toDocumentWithHosts(added), "ui/html/urls.html")
+	toResponse(w, r, added, toTemplateDocument(added), "ui/html/urls.html")
 }
 
 func find(w http.ResponseWriter, r *http.Request) {
 	var q SearchQuery
 	unmarshall(r.Body, &q)
-	matches := search.Query(q.Query)
 
-	toResponse(w, r, matches, toDocumentWithHosts(matches), "ui/html/documents.html")
+	matches, err := internal.QueryWithHighlight(q.Query, html.Name)
+	if err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
+	}
+
+	toResponse(w, r, matches, toTemplateDocument(matches), "ui/html/documents.html")
 }
 
 func all(w http.ResponseWriter, r *http.Request) {
-	matches := search.MatchAll()
-	resp := make([]string, 0, len(matches))
-	for _, m := range matches {
-		resp = append(resp, m.URL)
+	matches, err := internal.MatchAll()
+	if err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
 	}
 
-	if err := marshall(w, resp); err != nil {
-		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+	urls := make([]string, 0, len(matches))
+	for _, m := range matches {
+		urls = append(urls, m.URL)
 	}
+
+	toResponse(w, r, urls, toTemplateDocument(matches), "ui/html/urls.html")
 }
 
 func remove(w http.ResponseWriter, r *http.Request) {
 	var u URLs
 	unmarshall(r.Body, &u)
-	if err := search.Delete(u.URLs); err != nil {
+	if err := internal.Delete(u.URLs); err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
 }
@@ -139,26 +147,27 @@ func renderTemplate(w http.ResponseWriter, data interface{}, files...string) err
 	return tmpl.Execute(w, data)
 }
 
-func toDocumentWithHosts(d []search.Document) []DocumentWithHost {
-	resp := make([]DocumentWithHost, 0, len(d))
+func toTemplateDocument(d []internal.Document) []TemplateDocument {
+	resp := make([]TemplateDocument, 0, len(d))
 	for _, m := range d {
-		resp = append(resp, DocumentWithHost{
-			Document: m,
-			Host:   formatHost(m.URL),
+		resp = append(resp, TemplateDocument{
+			Body: template.HTML(m.EscapeBody()),
+			URL: m.URL,
+			Host: formatHost(m.URL),
 		})
 	}
 	return resp
 }
 
 // TODO have this take a function that transforms the json to html in the case block
-func toResponse(w http.ResponseWriter, r *http.Request, json interface{}, html interface{}, path string) {
+func toResponse(w http.ResponseWriter, r *http.Request, j interface{}, h interface{}, path string) {
 	switch r.Header.Get(Accept) {
 	case ContentTypeHTML:
-		if err := renderTemplate(w, html, path); err != nil {
+		if err := renderTemplate(w, h, path); err != nil {
 			http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 		}
 	default:
-		if err := marshall(w, json); err != nil {
+		if err := marshall(w, j); err != nil {
 			http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 		}
 	}

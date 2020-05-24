@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/jtanza/bobolink/internal/search"
+	"github.com/jtanza/bobolink/internal"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -11,7 +11,7 @@ func init() {
 		Use:   "remove",
 		Short: "delete urls from store",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := search.Delete(args); err != nil {
+			if err := internal.Delete(args); err != nil {
 				log.Fatal(err)
 			}
 		},

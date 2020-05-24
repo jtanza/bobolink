@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/jtanza/bobolink/internal/search"
+	"github.com/jtanza/bobolink/internal"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -11,7 +11,7 @@ func init() {
 		Use:   "add",
 		Short: "adds urls to store",
 		Run: func(cmd *cobra.Command, args []string) {
-			if _, err := search.AddResources(args); err != nil {
+			if _, err := internal.AddResources(args); err != nil {
 				log.Fatal(err)
 			}
 		},

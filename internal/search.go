@@ -1,16 +1,18 @@
-package search
+package internal
 
 import (
 	"fmt"
 	"github.com/blevesearch/bleve"
+	_ "github.com/blevesearch/bleve/search/highlight/highlighter/ansi"
+	_ "github.com/blevesearch/bleve/search/highlight/highlighter/html"
 	"log"
 	"os"
 	"strings"
 )
 
-const indexPath = "/tmp/search.bleve" // TODO
+const indexPath = "/opt/bobolink/index.bleve" // TODO
 
-var index = getIndexAt(indexPath) // TODO Close()?
+var index = getIndexAt(indexPath)
 
 func AddResources(resources []string) ([]Document, error) {
 	docs, err := Convert(resources)
@@ -31,39 +33,47 @@ func AddResources(resources []string) ([]Document, error) {
 	return docs, nil
 }
 
-func Query(q string) []Document {
-	mq := bleve.NewMatchQuery(q) // TODO Regex?
+func Query(q string) ([]Document, error) {
+	return QueryWithHighlight(q, "")
+}
+
+func QueryWithHighlight(q string, highlight string) ([]Document, error)  {
+	mq := bleve.NewQueryStringQuery(q)
 	r := bleve.NewSearchRequest(mq)
 
-	r.Highlight = bleve.NewHighlight() // TODO add ansi highlight
+	if highlight != "" {
+		r.Highlight = bleve.NewHighlightWithStyle(highlight)
+	} else {
+		r.Highlight = bleve.NewHighlight()
+	}
 	r.Highlight.AddField(Body)
 
 	r.Fields = append(r.Fields, Body)
 	r.Fields = append(r.Fields, URL)
 
-	return query(r)
+	return search(r)
 }
 
-func MatchAll() []Document {
+func MatchAll() ([]Document, error) {
 	q := bleve.NewMatchAllQuery()
 	r := bleve.NewSearchRequest(q)
 	r.Fields = append(r.Fields, URL)
 
-	return query(r)
+	return search(r)
 }
 
-func Delete(resources []string) error {
+func Delete(urls []string) error {
 	b := index.NewBatch()
-	for _, url := range resources {
-		b.Delete(url)
+	for _, u := range urls {
+		b.Delete(u)
 	}
 	return index.Batch(b)
 }
 
-func query(r *bleve.SearchRequest) []Document {
+func search(r *bleve.SearchRequest) ([]Document, error) {
 	search, err := index.Search(r)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	res := make([]Document, 0, search.Total)
@@ -77,25 +87,25 @@ func query(r *bleve.SearchRequest) []Document {
 			res = append(res, doc)
 		}
 	}
-	return res
+	return res, nil
 }
 
-func getIndexAt(indexPath string) bleve.Index {
-	var index bleve.Index
-	if exists(indexPath) {
-		openIdx, err := bleve.Open(indexPath)
+func getIndexAt(path string) bleve.Index {
+	var idx bleve.Index
+	if exists(path) {
+		openIdx, err := bleve.Open(path)
 		if err != nil {
 			log.Fatal(err)
 		}
-		index = openIdx
+		idx = openIdx
 	} else {
-		newIdx, err := bleve.New(indexPath, bleve.NewIndexMapping())
+		newIdx, err := bleve.New(path, bleve.NewIndexMapping())
 		if err != nil {
 			log.Fatal(err)
 		}
-		index = newIdx
+		idx = newIdx
 	}
-	return index
+	return idx
 }
 
 func exists(path string) bool {

@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/jtanza/bobolink/internal/search"
+	"github.com/blevesearch/bleve/search/highlight/format/ansi"
+	"github.com/jtanza/bobolink/internal"
 	"github.com/spf13/cobra"
+	"log"
 )
 
 var All bool
@@ -24,14 +26,22 @@ func init() {
 	rootCmd.AddCommand(findCmd)
 }
 
-func searchQuery(query string) {
-	for _, d := range search.Query(query) {
+func searchQuery(q string) {
+	docs, err := internal.QueryWithHighlight(q, ansi.Name)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, d := range docs {
 		fmt.Println(d)
 	}
 }
 
 func findAll() {
-	for _, d := range search.MatchAll() {
+	docs, err := internal.MatchAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, d := range docs {
 		fmt.Println(d.URL)
 	}
 }
