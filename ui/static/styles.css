@@ -1,6 +1,9 @@
 body {
     font-family: "Lucida Console", Monaco, monospace
 }
+body input {
+    margin-right: 10px;
+}
 a {
     color:blue;
 }
@@ -83,9 +86,12 @@ input[type="text"] {
     opacity: .5;
     font-size: 13px
 }
-.manage-links {
+.add-links {
     margin-bottom: 5px;
 }
 #added-title {
+    margin-bottom: 30px;
+}
+#deleted-title {
     margin-bottom: 30px;
 }

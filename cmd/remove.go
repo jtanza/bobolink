@@ -11,7 +11,7 @@ func init() {
 		Use:   "remove",
 		Short: "delete urls from store",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := internal.Delete(args); err != nil {
+			if _, err := internal.Delete(args); err != nil {
 				log.Fatal(err)
 			}
 		},

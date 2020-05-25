@@ -47,7 +47,7 @@ function search() {
         "Accept": "text/html"
     }
     const query = document.getElementById("resource-search").value
-    const path = query === ".*" ? "links/all" : "links/find"
+    const path = (query === ".*" || query === "*") ? "links/all" : "links/find"
     client.postWithHeaders(path, JSON.stringify({"query": query}), headers, function(resp) {
         document.getElementById("search-results").innerHTML = resp ? resp : "No Matches.";
     }, function (resp) {
@@ -60,17 +60,49 @@ function add() {
         "Content-Type":"application/json;charset=UTF-8",
         "Accept": "text/html"
     }
-    const urls = document.getElementById("manage").value;
+    const urls = document.getElementById("add").value;
     client.putWithHeaders("links/add", JSON.stringify({"urls": urls.trim().split(" ")}), headers, function(resp) {
         document.getElementById("add-form").style.display = "none"
         document.getElementById("added-title").innerText = "Successfully Added:"
-        document.getElementById("manage-results").innerHTML = resp;
+        document.getElementById("added-results").innerHTML = resp;
     }, function (resp) {
         document.getElementById("add-form").style.display = "none"
         document.getElementById("added-title").innerText = "Error:"
-        document.getElementById("manage-results").innerHTML = resp.responseText;
+        document.getElementById("added-results").innerHTML = resp.responseText;
     });
 }
 
+function del() {
+    const boxes = document.getElementsByName("delete-box");
+    let selected = []
+    for (let i = 0; i < boxes.length; i++) {
+        if (boxes[i].checked) {
+            selected.push(boxes[i].value);
+        }
+    }
 
+    if (selected.length > 0) {
+        if (confirm("Are you sure you'd like to delete the " + selected.length + " url/s?\nThis action cannot be undone.")) {
+            const headers = {
+                "Content-Type":"application/json;charset=UTF-8",
+                "Accept": "text/html"
+            }
+            client.putWithHeaders("links/remove", JSON.stringify({"urls": selected}), headers, function(resp) {
+                document.getElementById("delete-list").style.display = "none"
+                document.getElementById("deleted-title").innerText = "Successfully Deleted:"
+                document.getElementById("deleted-results").innerHTML = resp;
+            }, function (resp) {
+                document.getElementById("delete-list").style.display = "none"
+                document.getElementById("deleted-title").innerText = "Error:"
+                document.getElementById("deleted-results").innerHTML = resp.responseText;
+            });
+        }
+    }
+}
 
+function toggle(source) {
+    const checkboxes = document.getElementsByName("delete-box");
+    for(let i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = source.checked;
+    }
+}

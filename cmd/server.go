@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 )
 
 const (
@@ -29,8 +30,9 @@ func init() {
 			http.HandleFunc("/links/find", find)
 			http.HandleFunc("/links/all", all)
 			http.HandleFunc("/links/remove", remove)
-			http.HandleFunc("/manage", manage)
-			http.HandleFunc("/", index)
+			http.HandleFunc("/", indexView)
+			http.HandleFunc("/add", addView)
+			http.HandleFunc("/delete", deleteView)
 
 			http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("ui/static/"))))
 
@@ -61,7 +63,7 @@ func add(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
 	}
 
-	toResponse(w, r, added, toTemplateDocument(added), "ui/html/urls.html")
+	toResponse(w, r, added, toTemplateDocuments(added), "ui/html/urls.html")
 }
 
 func find(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +75,7 @@ func find(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
 	}
 
-	toResponse(w, r, matches, toTemplateDocument(matches), "ui/html/documents.html")
+	toResponse(w, r, matches, toTemplateDocuments(matches), "ui/html/documents.html")
 }
 
 func all(w http.ResponseWriter, r *http.Request) {
@@ -87,18 +89,21 @@ func all(w http.ResponseWriter, r *http.Request) {
 		urls = append(urls, m.URL)
 	}
 
-	toResponse(w, r, urls, toTemplateDocument(matches), "ui/html/urls.html")
+	toResponse(w, r, urls, toTemplateDocuments(matches), "ui/html/urls.html")
 }
 
 func remove(w http.ResponseWriter, r *http.Request) {
 	var u URLs
 	unmarshall(r.Body, &u)
-	if err := internal.Delete(u.URLs); err != nil {
+
+	deleted, err := internal.Delete(u.URLs)
+	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
+	toResponse(w, r, deleted, urlsToTemplateDocs(deleted), "ui/html/urls.html")
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
+func indexView(w http.ResponseWriter, r *http.Request) {
 	files := []string{
 		"ui/html/search.html",
 		"ui/html/base.html",
@@ -109,9 +114,9 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func manage(w http.ResponseWriter, r *http.Request) {
+func addView(w http.ResponseWriter, r *http.Request) {
 	files := []string{
-		"ui/html/manage.html",
+		"ui/html/add.html",
 		"ui/html/base.html",
 	}
 	tmpl := template.Must(template.ParseFiles(files...))
@@ -120,12 +125,32 @@ func manage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func formatHost(u string) string {
+func deleteView(w http.ResponseWriter, r *http.Request) {
+	files := []string{
+		"ui/html/delete.html",
+		"ui/html/base.html",
+	}
+
+	docs, err := internal.MatchAll()
+	if err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+	}
+	sort.SliceStable(docs, func(i, j int) bool {
+		return docs[i].URL < docs[j].URL
+	})
+
+	tmpl := template.Must(template.ParseFiles(files...))
+	if err := tmpl.Execute(w, toTemplateDocuments(docs)); err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+	}
+}
+
+func toURL(u string) *url.URL {
 	p, err := url.Parse(u)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return p.Host
+	return p
 }
 
 func unmarshall(r io.ReadCloser, schema interface{}) {
@@ -147,13 +172,25 @@ func renderTemplate(w http.ResponseWriter, data interface{}, files...string) err
 	return tmpl.Execute(w, data)
 }
 
-func toTemplateDocument(d []internal.Document) []TemplateDocument {
+func toTemplateDocuments(d []internal.Document) []TemplateDocument {
 	resp := make([]TemplateDocument, 0, len(d))
 	for _, m := range d {
 		resp = append(resp, TemplateDocument{
 			Body: template.HTML(m.EscapeBody()),
 			URL: m.URL,
-			Host: formatHost(m.URL),
+			Host: toURL(m.URL).Host,
+		})
+	}
+	return resp
+}
+
+func urlsToTemplateDocs(urls []string) []TemplateDocument {
+	resp := make([]TemplateDocument, 0, len(urls))
+	for _, u := range urls {
+		parsed := toURL(u)
+		resp = append(resp, TemplateDocument{
+			URL: parsed.String(),
+			Host: parsed.Host,
 		})
 	}
 	return resp

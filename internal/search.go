@@ -10,9 +10,8 @@ import (
 	"strings"
 )
 
-const indexPath = "/opt/bobolink/index.bleve" // TODO
-
-var index = getIndexAt(indexPath)
+const indexEnv = "BOBOLINK_INDEX"
+var index = getIndex()
 
 func AddResources(resources []string) ([]Document, error) {
 	docs, err := Convert(resources)
@@ -62,12 +61,15 @@ func MatchAll() ([]Document, error) {
 	return search(r)
 }
 
-func Delete(urls []string) error {
+func Delete(urls []string) ([]string, error) {
 	b := index.NewBatch()
 	for _, u := range urls {
 		b.Delete(u)
 	}
-	return index.Batch(b)
+	if err := index.Batch(b); err != nil {
+		return nil, err
+	}
+	return urls, nil
 }
 
 func search(r *bleve.SearchRequest) ([]Document, error) {
@@ -90,7 +92,11 @@ func search(r *bleve.SearchRequest) ([]Document, error) {
 	return res, nil
 }
 
-func getIndexAt(path string) bleve.Index {
+func getIndex() bleve.Index {
+	path, ok := os.LookupEnv(indexEnv)
+	if !ok {
+		log.Fatalf("Cannot find index. Please set env var %s", indexEnv)
+	}
 	var idx bleve.Index
 	if exists(path) {
 		openIdx, err := bleve.Open(path)
