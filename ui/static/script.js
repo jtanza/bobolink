@@ -82,7 +82,7 @@ function del() {
     }
 
     if (selected.length > 0) {
-        if (confirm("Are you sure you'd like to delete the " + selected.length + " url/s?\nThis action cannot be undone.")) {
+        if (confirm("Are you sure you'd like to delete the " + selected.length + " url/s selected?\nThis action cannot be undone.")) {
             const headers = {
                 "Content-Type":"application/json;charset=UTF-8",
                 "Accept": "text/html"

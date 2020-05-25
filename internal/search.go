@@ -5,6 +5,7 @@ import (
 	"github.com/blevesearch/bleve"
 	_ "github.com/blevesearch/bleve/search/highlight/highlighter/ansi"
 	_ "github.com/blevesearch/bleve/search/highlight/highlighter/html"
+	"github.com/jtanza/bobolink/cmd"
 	"log"
 	"os"
 	"strings"
@@ -93,10 +94,15 @@ func search(r *bleve.SearchRequest) ([]Document, error) {
 }
 
 func getIndex() bleve.Index {
-	path, ok := os.LookupEnv(indexEnv)
-	if !ok {
-		log.Fatalf("Cannot find index. Please set env var %s", indexEnv)
+	path := cmd.IndexPath
+	if cmd.IndexPath == "" {
+		env, ok := os.LookupEnv(indexEnv)
+		if !ok {
+			log.Fatalf("Cannot find index. Please set env var %s or pass index explicitly with flag: --index-path", indexEnv)
+		}
+		path = env
 	}
+
 	var idx bleve.Index
 	if exists(path) {
 		openIdx, err := bleve.Open(path)

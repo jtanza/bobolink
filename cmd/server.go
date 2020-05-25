@@ -21,6 +21,8 @@ const (
 	ContentTypeHTML = "text/html"
 )
 
+var Port string
+
 func init() {
 	var serverCmd = &cobra.Command{
 		Use:   "server",
@@ -36,12 +38,14 @@ func init() {
 
 			http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("ui/static/"))))
 
-			fmt.Println("Listening on port 8080...")
-			log.Fatal(http.ListenAndServe(":8080", nil)) // TODO
+			fmt.Printf("Listening on port %s...\n", Port)
+			log.Fatal(http.ListenAndServe(Port, nil))
 		},
 	}
+	serverCmd.Flags().StringVarP(&Port, "port", "p", ":8080", "set port")
 	rootCmd.AddCommand(serverCmd)
 }
+
 type URLs struct {
 	URLs []string `json:"urls"`
 }
