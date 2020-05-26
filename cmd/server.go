@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/blevesearch/bleve/analysis/char/html"
 	"github.com/jtanza/bobolink/internal"
-	"github.com/spf13/cobra"
 	"html/template"
 	"io"
 	"log"
@@ -14,6 +14,8 @@ import (
 	"sort"
 )
 
+var search internal.Search
+
 const (
 	Accept = "Accept"
 	ContentType = "Content-Type"
@@ -21,29 +23,44 @@ const (
 	ContentTypeHTML = "text/html"
 )
 
-var Port string
+type ServerCommand struct {
+	Search internal.Search
+}
 
-func init() {
-	var serverCmd = &cobra.Command{
-		Use:   "server",
-		Short: "starts the bobolink web server",
-		Run: func(cmd *cobra.Command, args []string) {
-			http.HandleFunc("/links/add", add)
-			http.HandleFunc("/links/find", find)
-			http.HandleFunc("/links/all", all)
-			http.HandleFunc("/links/remove", remove)
-			http.HandleFunc("/", indexView)
-			http.HandleFunc("/add", addView)
-			http.HandleFunc("/delete", deleteView)
+func (s ServerCommand) Run(args []string) error {
+	search = s.Search
 
-			http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("ui/static/"))))
-
-			fmt.Printf("Listening on port %s...\n", Port)
-			log.Fatal(http.ListenAndServe(Port, nil))
-		},
+	f := flag.NewFlagSet("server", flag.ContinueOnError)
+	port := f.String("port", ":8080", "port to listen on")
+	if err := f.Parse(args); err != nil {
+		return err
 	}
-	serverCmd.Flags().StringVarP(&Port, "port", "p", ":8080", "set port")
-	rootCmd.AddCommand(serverCmd)
+
+	http.HandleFunc("/links/add", add)
+	http.HandleFunc("/links/find", find)
+	http.HandleFunc("/links/all", all)
+	http.HandleFunc("/links/remove", remove)
+	http.HandleFunc("/", indexView)
+	http.HandleFunc("/add", addView)
+	http.HandleFunc("/delete", deleteView)
+
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("ui/static/"))))
+
+	fmt.Printf("Listening on port %s...\n", *port)
+	return http.ListenAndServe(*port, nil)
+}
+
+func (s ServerCommand) Name() string {
+	return "server"
+}
+
+func (s ServerCommand) Help() string {
+	return "starts the bobolink web server"
+}
+
+func (s ServerCommand) Usage() string {
+	// TODO add flags
+	return "bobolink server [flags]"
 }
 
 type URLs struct {
@@ -62,7 +79,7 @@ func add(w http.ResponseWriter, r *http.Request) {
 	var u URLs
 	unmarshall(r.Body, &u)
 
-	added, err := internal.AddResources(u.URLs)
+	added, err := search.AddResources(u.URLs)
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
 	}
@@ -74,7 +91,7 @@ func find(w http.ResponseWriter, r *http.Request) {
 	var q SearchQuery
 	unmarshall(r.Body, &q)
 
-	matches, err := internal.QueryWithHighlight(q.Query, html.Name)
+	matches, err := search.QueryWithHighlight(q.Query, html.Name)
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
 	}
@@ -83,7 +100,7 @@ func find(w http.ResponseWriter, r *http.Request) {
 }
 
 func all(w http.ResponseWriter, r *http.Request) {
-	matches, err := internal.MatchAll()
+	matches, err := search.MatchAll()
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
 	}
@@ -100,7 +117,7 @@ func remove(w http.ResponseWriter, r *http.Request) {
 	var u URLs
 	unmarshall(r.Body, &u)
 
-	deleted, err := internal.Delete(u.URLs)
+	deleted, err := search.Delete(u.URLs)
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
@@ -135,7 +152,7 @@ func deleteView(w http.ResponseWriter, r *http.Request) {
 		"ui/html/base.html",
 	}
 
-	docs, err := internal.MatchAll()
+	docs, err := search.MatchAll()
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
