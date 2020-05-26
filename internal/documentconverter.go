@@ -23,16 +23,6 @@ type Document struct {
 	URL string
 }
 
-func (d Document) String() string {
-	return fmt.Sprintf("URL: %v\nMatch: %v\n", d.URL, d.Body)
-}
-
-func (d Document) EscapeBody() string {
-	s := strings.ReplaceAll(html.EscapeString(d.Body), "&lt;mark&gt;", "<mark>")
-	return strings.ReplaceAll(s, "&lt;/mark&gt", "</mark>")
-
-}
-
 func Convert(resources []string) ([]Document, error) {
 	urls, err := toURLS(resources)
 	if err != nil {
@@ -45,13 +35,13 @@ func Convert(resources []string) ([]Document, error) {
 		if err != nil {
 			return nil, err
 		}
-		docs = append(docs, ToDocument(body, u))
+		docs = append(docs, makeDocument(body, u))
 	}
 
 	return docs, nil
 }
 
-func ToDocument(body []byte, u url.URL) Document {
+func makeDocument(body []byte, u url.URL) Document {
 	return Document{
 		Id:   u.String(),
 		Body: extractText(body),
@@ -59,10 +49,20 @@ func ToDocument(body []byte, u url.URL) Document {
 	}
 }
 
+func (d Document) String() string {
+	return fmt.Sprintf("URL: %v\nMatch: %v\n", d.URL, d.Body)
+}
+
+func (d Document) EscapeBody() string {
+	s := strings.ReplaceAll(html.EscapeString(d.Body), "&lt;mark&gt;", "<mark>")
+	return strings.ReplaceAll(s, "&lt;/mark&gt", "</mark>")
+
+}
+
 func toURLS(urls []string) ([]url.URL, error) {
 	res := make([]url.URL, 0, len(urls))
 	for _, val := range urls {
-		v, err := url.Parse(val) // FIXME doesnt actually validate urls
+		v, err := url.Parse(val)
 		if err != nil {
 			return nil, err
 		}

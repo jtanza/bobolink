@@ -12,7 +12,7 @@ func TestToDocument(t *testing.T) {
 		t.Error(err)
 	}
 
-	got := ToDocument(page, *u)
+	got := makeDocument(page, *u)
 	compareStrings(got.URL, "http://my-page.com", t)
 	compareStrings(got.Body, "A Simple HTML Document This is a very simple HTML document It only has two paragraphs", t)
 }
@@ -24,7 +24,7 @@ func TestToDocument_allTags(t *testing.T) {
 		t.Error(err)
 	}
 
-	compareStrings(ToDocument(page, *u).Body, "Links:Foo BarBazTEXT I NEED IT", t)
+	compareStrings(makeDocument(page, *u).Body, "Links:Foo BarBazTEXT I NEED IT", t)
 }
 
 func TestToDocument_comments(t *testing.T) {
@@ -34,7 +34,7 @@ func TestToDocument_comments(t *testing.T) {
 		t.Error(err)
 	}
 
-	compareStrings(ToDocument(page, *u).Body, "Compare-and-swap - Wikipedia", t)
+	compareStrings(makeDocument(page, *u).Body, "Compare-and-swap - Wikipedia", t)
 }
 
 func TestDocument_EscapeBody(t *testing.T) {

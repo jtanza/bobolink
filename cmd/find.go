@@ -8,40 +8,33 @@ import (
 	"log"
 )
 
-var All bool
+var returnAll bool
 
 func init() {
-	var findCmd = &cobra.Command{
+	var find = &cobra.Command{
 		Use:   "find",
-		Short: "search urls",
+		Short: "Searches urls",
 		Run: func(cmd *cobra.Command, args []string) {
-			if All {
-				findAll()
+			s := internal.NewSearch(indexPath)
+			if returnAll {
+				docs, err := s.MatchAll()
+				if err != nil {
+					log.Fatal(err)
+				}
+				for _, d := range docs {
+					fmt.Println(d.URL)
+				}
 			} else {
-				searchQuery(args[0])
+				docs, err := s.QueryWithHighlight(args[0], ansi.Name)
+				if err != nil {
+					log.Fatal(err)
+				}
+				for _, d := range docs {
+					fmt.Println(d)
+				}
 			}
 		},
 	}
-	findCmd.Flags().BoolVarP(&All, "all", "a", false, "return all links")
-	rootCmd.AddCommand(findCmd)
-}
-
-func searchQuery(q string) {
-	docs, err := internal.QueryWithHighlight(q, ansi.Name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, d := range docs {
-		fmt.Println(d)
-	}
-}
-
-func findAll() {
-	docs, err := internal.MatchAll()
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, d := range docs {
-		fmt.Println(d.URL)
-	}
+	find.Flags().BoolVarP(&returnAll, "all", "a", false, "return all links")
+	root.AddCommand(find)
 }

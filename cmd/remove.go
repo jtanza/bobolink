@@ -7,15 +7,16 @@ import (
 )
 
 func init() {
-	var addCmd = &cobra.Command{
+	var remove = &cobra.Command{
 		Use:   "remove",
-		Short: "delete urls from store",
+		Short: "Deletes urls from store",
 		Run: func(cmd *cobra.Command, args []string) {
-			if _, err := internal.Delete(args); err != nil {
+			s := internal.NewSearch(indexPath)
+			if _, err := s.Delete(args); err != nil {
 				log.Fatal(err)
 			}
 		},
 	}
-	rootCmd.AddCommand(addCmd)
+	root.AddCommand(remove)
 }
 

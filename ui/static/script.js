@@ -1,5 +1,5 @@
-const http = function () {
-    this.request = function (url, data, headers, success, error, verb) {
+const http = function() {
+    this.request = function (url, data, success, error, verb) {
         const request = new XMLHttpRequest();
         request.onreadystatechange = function () {
             if (request.readyState === 4) {
@@ -10,45 +10,27 @@ const http = function () {
                 }
             }
         };
+
         request.open(verb, url);
-
-        Object.keys(headers).forEach(function (k) {
-            request.setRequestHeader(k, headers[k])
-        });
-
-        if (data) {
-            request.send(data);
-        } else {
-            request.send();
-        }
+        request.setRequestHeader("Content-Type", "application/json;charset=UTF-8",)
+        request.setRequestHeader("Accept", "text/html")
+        request.send(data);
     }
 
-    this.get = function(url, success, error) {
-        this.request(url, null, {}, success, error, "GET")
-    };
-    this.postWithHeaders = function(url, data, headers, success, error) {
-        this.request(url, data, headers, success, error, "POST")
-    };
-    this.putWithHeaders = function(url, data, headers, success, error) {
-        this.request(url, data, headers, success, error, "POST")
-    };
     this.post = function(url, data, success, error) {
-        this.request(url, data, {"Content-Type":"application/json;charset=UTF-8"}, success, error, "POST")
+        this.request(url, data, success, error, "POST")
     };
+
     this.put = function(url, data, success, error) {
-        this.request(url, data, {"Content-Type":"application/json;charset=UTF-8"}, success, error, "PUT")
+        this.request(url, data, success, error, "PUT")
     };
 
 }; const client = new http();
 
 function search() {
-    const headers = {
-        "Content-Type":"application/json;charset=UTF-8",
-        "Accept": "text/html"
-    }
     const query = document.getElementById("resource-search").value
     const path = (query === ".*" || query === "*") ? "links/all" : "links/find"
-    client.postWithHeaders(path, JSON.stringify({"query": query}), headers, function(resp) {
+    client.post(path, JSON.stringify({"query": query}), function(resp) {
         document.getElementById("search-results").innerHTML = resp ? resp : "No Matches.";
     }, function (resp) {
         document.getElementById("search-results").innerText = resp.responseText
@@ -56,12 +38,8 @@ function search() {
 }
 
 function add() {
-    const headers = {
-        "Content-Type":"application/json;charset=UTF-8",
-        "Accept": "text/html"
-    }
     const urls = document.getElementById("add").value;
-    client.putWithHeaders("links/add", JSON.stringify({"urls": urls.trim().split(" ")}), headers, function(resp) {
+    client.put("links/add", JSON.stringify({"urls": urls.trim().split(" ")}), function(resp) {
         document.getElementById("add-form").style.display = "none"
         document.getElementById("added-title").innerText = "Successfully Added:"
         document.getElementById("added-results").innerHTML = resp;
@@ -83,11 +61,7 @@ function del() {
 
     if (selected.length > 0) {
         if (confirm("Are you sure you'd like to delete the " + selected.length + " url/s selected?\nThis action cannot be undone.")) {
-            const headers = {
-                "Content-Type":"application/json;charset=UTF-8",
-                "Accept": "text/html"
-            }
-            client.putWithHeaders("links/remove", JSON.stringify({"urls": selected}), headers, function(resp) {
+            client.put("links/remove", JSON.stringify({"urls": selected}), function(resp) {
                 document.getElementById("delete-list").style.display = "none"
                 document.getElementById("deleted-title").innerText = "Successfully Deleted:"
                 document.getElementById("deleted-results").innerHTML = resp;
