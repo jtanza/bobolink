@@ -5,49 +5,39 @@ import (
 	"github.com/blevesearch/bleve"
 	_ "github.com/blevesearch/bleve/search/highlight/highlighter/ansi"
 	_ "github.com/blevesearch/bleve/search/highlight/highlighter/html"
+	"github.com/jtanza/bobolink/cmd"
 	"log"
 	"os"
 	"strings"
 )
 
 const indexEnv = "BOBOLINK_INDEX"
+var index = getIndex()
 
-type Search struct {
-	IndexPath string
-	index bleve.Index
-}
-
-func NewSearch(indexPath string) *Search {
-	return &Search{
-		IndexPath: indexPath,
-		index: openIndex(indexPath),
-	}
-}
-
-func (s Search) AddResources(resources []string) ([]Document, error) {
+func AddResources(resources []string) ([]Document, error) {
 	docs, err := Convert(resources)
 	if err != nil {
 		return nil, err
 	}
 
-	b := s.index.NewBatch()
+	b := index.NewBatch()
 	for _, d := range docs {
 		if err := b.Index(d.Id, d); err != nil {
 			log.Fatal(err)
 		}
 	}
-	if err := s.index.Batch(b); err != nil {
+	if err := index.Batch(b); err != nil {
 		return nil, err
 	}
 
 	return docs, nil
 }
 
-func (s Search) Query(q string) ([]Document, error) {
-	return s.QueryWithHighlight(q, "")
+func Query(q string) ([]Document, error) {
+	return QueryWithHighlight(q, "")
 }
 
-func (s Search) QueryWithHighlight(q string, highlight string) ([]Document, error)  {
+func QueryWithHighlight(q string, highlight string) ([]Document, error)  {
 	mq := bleve.NewQueryStringQuery(q)
 	r := bleve.NewSearchRequest(mq)
 
@@ -61,30 +51,30 @@ func (s Search) QueryWithHighlight(q string, highlight string) ([]Document, erro
 	r.Fields = append(r.Fields, Body)
 	r.Fields = append(r.Fields, URL)
 
-	return search(r, s.index)
+	return search(r)
 }
 
-func (s Search) MatchAll() ([]Document, error) {
+func MatchAll() ([]Document, error) {
 	q := bleve.NewMatchAllQuery()
 	r := bleve.NewSearchRequest(q)
 	r.Fields = append(r.Fields, URL)
 
-	return search(r, s.index)
+	return search(r)
 }
 
-func (s Search) Delete(urls []string) ([]string, error) {
-	b := s.index.NewBatch()
+func Delete(urls []string) ([]string, error) {
+	b := index.NewBatch()
 	for _, u := range urls {
 		b.Delete(u)
 	}
-	if err := s.index.Batch(b); err != nil {
+	if err := index.Batch(b); err != nil {
 		return nil, err
 	}
 	return urls, nil
 }
 
-func search(r *bleve.SearchRequest, i bleve.Index) ([]Document, error) {
-	search, err := i.Search(r)
+func search(r *bleve.SearchRequest) ([]Document, error) {
+	search, err := index.Search(r)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +93,9 @@ func search(r *bleve.SearchRequest, i bleve.Index) ([]Document, error) {
 	return res, nil
 }
 
-func openIndex(path string) bleve.Index {
-	if path == "" {
+func getIndex() bleve.Index {
+	path := cmd.IndexPath
+	if cmd.IndexPath == "" {
 		env, ok := os.LookupEnv(indexEnv)
 		if !ok {
 			log.Fatalf("Cannot find index. Please set env var %s or pass index explicitly with flag: --index-path", indexEnv)
