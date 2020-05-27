@@ -15,16 +15,17 @@ import (
 	"strings"
 )
 
+// Set of internally used headers and header values
 const (
-	Accept = "Accept"
-	ContentType = "Content-Type"
+	Accept          = "Accept"
+	ContentType     = "Content-Type"
 	ContentTypeJSON = "application/json"
 	ContentTypeHTML = "text/html"
 )
 
 var (
 	search *internal.Search
-	port string
+	port   string
 )
 
 func init() {
@@ -55,12 +56,12 @@ func init() {
 	root.AddCommand(server)
 }
 
-type URLs struct {
+type urls struct {
 	URLs []string `json:"urls"`
 }
 
 func add(w http.ResponseWriter, r *http.Request) {
-	var u URLs
+	var u urls
 	unmarshall(r.Body, &u)
 
 	added, err := search.AddResources(u.URLs)
@@ -100,7 +101,7 @@ func all(w http.ResponseWriter, r *http.Request) {
 }
 
 func remove(w http.ResponseWriter, r *http.Request) {
-	var u URLs
+	var u urls
 	unmarshall(r.Body, &u)
 
 	deleted, err := search.Delete(u.URLs)
@@ -111,33 +112,20 @@ func remove(w http.ResponseWriter, r *http.Request) {
 }
 
 func indexView(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"ui/html/search.html",
-		"ui/html/base.html",
-	}
-	tmpl := template.Must(template.ParseFiles(files...))
+	tmpl := buildStaticTemplate(w, []string{"ui/html/search.html", "ui/html/base.html"}...)
 	if err := tmpl.Execute(w, nil); err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
 }
 
 func addView(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"ui/html/add.html",
-		"ui/html/base.html",
-	}
-	tmpl := template.Must(template.ParseFiles(files...))
+	tmpl := buildStaticTemplate(w, []string{"ui/html/add.html", "ui/html/base.html"}...)
 	if err := tmpl.Execute(w, nil); err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
 }
 
 func deleteView(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"ui/html/delete.html",
-		"ui/html/base.html",
-	}
-
 	docs, err := search.MatchAll()
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
@@ -146,7 +134,7 @@ func deleteView(w http.ResponseWriter, r *http.Request) {
 		return docs[i].URL < docs[j].URL
 	})
 
-	tmpl := template.Must(template.ParseFiles(files...))
+	tmpl := buildStaticTemplate(w, []string{"ui/html/delete.html", "ui/html/base.html"}...)
 	if err := tmpl.Execute(w, docsToTemplateDocs(docs)); err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
@@ -165,8 +153,24 @@ func marshall(w http.ResponseWriter, v interface{}) error {
 	return json.NewEncoder(w).Encode(v)
 }
 
-func renderTemplate(w http.ResponseWriter, data interface{}, files...string) error {
-	tmpl := template.Must(template.ParseFiles(files...))
+func buildStaticTemplate(w http.ResponseWriter, file ...string) *template.Template {
+	b := make([]byte, 0)
+	for _, f := range file {
+		d, err := internal.Asset(f)
+		if err != nil {
+			http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+		}
+		b = append(b, d...)
+	}
+	temp, err := template.New("").Parse(string(b))
+	if err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+	}
+	return temp
+}
+
+func renderTemplate(w http.ResponseWriter, data interface{}, file string) error {
+	tmpl := buildStaticTemplate(w, file)
 	w.Header().Set(ContentType, ContentTypeHTML)
 	return tmpl.Execute(w, data)
 }
@@ -192,30 +196,30 @@ func toURL(u string) *url.URL {
 	return p
 }
 
-type TemplateDocument struct {
+type templateDocument struct {
 	Body template.HTML
-	URL string
+	URL  string
 	Host string
 }
 
-func docsToTemplateDocs(d []internal.Document) []TemplateDocument {
-	resp := make([]TemplateDocument, 0, len(d))
+func docsToTemplateDocs(d []internal.Document) []templateDocument {
+	resp := make([]templateDocument, 0, len(d))
 	for _, m := range d {
-		resp = append(resp, TemplateDocument{
+		resp = append(resp, templateDocument{
 			Body: template.HTML(m.EscapeBody()),
-			URL: m.URL,
+			URL:  m.URL,
 			Host: toURL(m.URL).Host,
 		})
 	}
 	return resp
 }
 
-func urlsToTemplateDocs(urls []string) []TemplateDocument {
-	resp := make([]TemplateDocument, 0, len(urls))
+func urlsToTemplateDocs(urls []string) []templateDocument {
+	resp := make([]templateDocument, 0, len(urls))
 	for _, u := range urls {
 		parsed := toURL(u)
-		resp = append(resp, TemplateDocument{
-			URL: parsed.String(),
+		resp = append(resp, templateDocument{
+			URL:  parsed.String(),
 			Host: parsed.Host,
 		})
 	}

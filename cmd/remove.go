@@ -19,4 +19,3 @@ func init() {
 	}
 	root.AddCommand(remove)
 }
-

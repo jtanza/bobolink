@@ -20,7 +20,7 @@ func TestQueryWithHighlight(t *testing.T) {
 
 	u := "www.foo.com/bar"
 	if err := index.Index(u, Document{
-		Id:   u,
+		ID:   u,
 		Body: "It can be used to encapsulate a known safe fragment of HTML",
 		URL:  u,
 	}); err != nil {

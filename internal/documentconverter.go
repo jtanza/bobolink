@@ -11,18 +11,23 @@ import (
 	"strings"
 )
 
+// Named Document fields for simple referencing
 const (
-	Id = "Id"
+	ID   = "ID"
 	Body = "Body"
-	URL = "URL"
+	URL  = "URL"
 )
 
+// Document represents an indexed HTML article within our content
+// index.
 type Document struct {
-	Id string
+	ID   string
 	Body string
-	URL string
+	URL  string
 }
 
+// Convert attempts to follow the URLs provided as resources
+// fetch them over the network, and parse them into Documents.
 func Convert(resources []string) ([]Document, error) {
 	urls, err := toURLS(resources)
 	if err != nil {
@@ -43,7 +48,7 @@ func Convert(resources []string) ([]Document, error) {
 
 func makeDocument(body []byte, u url.URL) Document {
 	return Document{
-		Id:   u.String(),
+		ID:   u.String(),
 		Body: extractText(body),
 		URL:  u.String(),
 	}
@@ -53,6 +58,9 @@ func (d Document) String() string {
 	return fmt.Sprintf("URL: %v\nMatch: %v\n", d.URL, d.Body)
 }
 
+// EscapeBody formats the Body field of Document d, preserving any highlights
+// which may have been added during document searching so that they may be
+// displayed as-is in HTML format.
 func (d Document) EscapeBody() string {
 	s := strings.ReplaceAll(html.EscapeString(d.Body), "&lt;mark&gt;", "<mark>")
 	return strings.ReplaceAll(s, "&lt;/mark&gt", "</mark>")

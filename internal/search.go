@@ -13,18 +13,25 @@ import (
 const indexFile = "index.bleve"
 const indexEnv = "BOBOLINK_DIR"
 
+// Search encapsulates the requisite state necessary to query
+// and augment our Document index
 type Search struct {
 	IndexPath string
-	index bleve.Index
+	index     bleve.Index
 }
 
+// NewSearch initializes the internal state of a Search type
+// returning a ready to use reference
 func NewSearch(indexPath string) *Search {
 	return &Search{
 		IndexPath: indexPath,
-		index: openIndex(indexPath),
+		index:     openIndex(indexPath),
 	}
 }
 
+// AddResources downloads the HTML corresponding to the resources
+// provided and after parsing them into Documents indexes them for later
+// retrieval.
 func (s Search) AddResources(resources []string) ([]Document, error) {
 	docs, err := Convert(resources)
 	if err != nil {
@@ -33,7 +40,7 @@ func (s Search) AddResources(resources []string) ([]Document, error) {
 
 	b := s.index.NewBatch()
 	for _, d := range docs {
-		if err := b.Index(d.Id, d); err != nil {
+		if err := b.Index(d.ID, d); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -44,11 +51,14 @@ func (s Search) AddResources(resources []string) ([]Document, error) {
 	return docs, nil
 }
 
+// Query searches for query q against our Document index.
 func (s Search) Query(q string) ([]Document, error) {
 	return s.QueryWithHighlight(q, "")
 }
 
-func (s Search) QueryWithHighlight(q string, highlight string) ([]Document, error)  {
+// QueryWithHighlight searches for query q against our Document index,
+// while providing the highlights specified by highlight.
+func (s Search) QueryWithHighlight(q string, highlight string) ([]Document, error) {
 	mq := bleve.NewQueryStringQuery(q)
 	r := bleve.NewSearchRequest(mq)
 
@@ -65,6 +75,8 @@ func (s Search) QueryWithHighlight(q string, highlight string) ([]Document, erro
 	return search(r, s.index)
 }
 
+// MatchAll performs a bleve.NewMatchAllQuery, returning
+// all Documents in our index.
 func (s Search) MatchAll() ([]Document, error) {
 	q := bleve.NewMatchAllQuery()
 	r := bleve.NewSearchRequest(q)
@@ -73,6 +85,7 @@ func (s Search) MatchAll() ([]Document, error) {
 	return search(r, s.index)
 }
 
+// Delete removes all Documents corresponding to urls provided.
 func (s Search) Delete(urls []string) ([]string, error) {
 	b := s.index.NewBatch()
 	for _, u := range urls {
@@ -94,7 +107,7 @@ func search(r *bleve.SearchRequest, i bleve.Index) ([]Document, error) {
 	if search.Total > 0 {
 		for _, h := range search.Hits {
 			doc := Document{
-				Id:   fmt.Sprint(h.Fields[Id]),
+				ID:   fmt.Sprint(h.Fields[ID]),
 				URL:  fmt.Sprint(h.Fields[URL]),
 				Body: fmt.Sprint(strings.Join(h.Fragments[Body], " ")),
 			}
