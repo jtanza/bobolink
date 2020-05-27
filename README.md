@@ -1,13 +1,6 @@
 # Bobolink
 Bobolink is a small tool that allows you to save links and search for them later. More specifically, Bobolink provides full text search on the body of HTML documents that you've added to your index. Bobolink is written in go. The frontend to the web service is written with go html templates and [vanilla js](http://vanilla-js.com/)
 
-### Motivation
-I save lots of links without the use a bookmark manager. When I find a new article I'd like to reference or read at another time, I simply append it to a long-running text file I keep locally. A downside to this approach is that URLs alone often lack adequate detail of the contents into the web page, so grep'ing for an article by some keyword is not always possible. 
-
-Bobolink addresses that: one can simply add URLs, search by some keyword and have returned all articles that mention these terms.
-
-N.B. Bobolink is not a "read-it-later" tool and does not offer any such functionality; searches return snippets of matching text only to highlight where an article matched a user's search query.
-
 ### Installation
 
 `go get -u github.com/jtanza/bobolink` 
@@ -100,3 +93,10 @@ $ curl -H "Accept: text/html" -d '{"query": "hash"}' localhost:8080/links/find
   <li>…to create long run of filled slots away from a key <mark>hash</mark>; position, e.g., along the probe sequence. See also primary clustering, clustering free, <mark>hash</mark>; table, open addressing, clustering, linear probing,…</li>
 </ul>
 ```
+
+### Motivation
+I save lots of links without the use a bookmark manager. When I find a new article I'd like to reference or read at another time, I simply append it to a long-running text file I keep locally. A downside to this approach is that URLs alone often lack adequate detail of the contents into the web page, so grep'ing for an article by some keyword is not always possible. 
+
+Bobolink addresses that: one can simply add URLs, search by some keyword and have returned all articles that mention these terms.
+
+N.B. Bobolink is not a "read-it-later" tool and does not offer any such functionality; searches return snippets of matching text only to highlight where an article matched a user's search query.
