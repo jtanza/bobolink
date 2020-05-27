@@ -9,7 +9,7 @@ Bobolink requires an index to manage stored text. The path to this index can eit
 
 This directory can of course be anywhere you'd like, but I personally use `/opt/bobolink`
 
-All the source HTML templates have been embedded as binary data (via go-bindata) so fetching the executable via `go get` is all that is required to run the web app as well.
+Please note that because the static files used on the frontend are not packaged with the bobolink executable, in order to run the web app it is necessary to install bobolink manually, i.e. clone the repo into `$GOPATH/src` and `go install`.
 
 ### Usage
 ```
