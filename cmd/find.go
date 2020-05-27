@@ -14,6 +14,8 @@ func init() {
 	var find = &cobra.Command{
 		Use:   "find",
 		Short: "Searches urls",
+		Long: "The find command searches the index against a provided query. " +
+			"Regex search syntax is supported",
 		Run: func(cmd *cobra.Command, args []string) {
 			s := internal.NewSearch(indexPath)
 			if returnAll {

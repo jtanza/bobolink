@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-const indexEnv = "BOBOLINK_INDEX"
+const indexFile = "index.bleve"
+const indexEnv = "BOBOLINK_DIR"
 
 type Search struct {
 	IndexPath string
@@ -107,10 +108,15 @@ func openIndex(path string) bleve.Index {
 	if path == "" {
 		env, ok := os.LookupEnv(indexEnv)
 		if !ok {
-			log.Fatalf("Cannot find index. Please set env var %s or pass index explicitly with flag: --index-path", indexEnv)
+			log.Fatalf("Cannot find index. Please set env var %s or pass index dir explicitly with flag: --index-path", indexEnv)
 		}
 		path = env
 	}
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+	path += indexFile
 
 	var idx bleve.Index
 	if exists(path) {
