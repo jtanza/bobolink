@@ -14,7 +14,5 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
-	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
-	golang.org/x/tools v0.0.0-20200526224456-8b020aee10d2 // indirect
 )

@@ -112,14 +112,14 @@ func remove(w http.ResponseWriter, r *http.Request) {
 }
 
 func indexView(w http.ResponseWriter, r *http.Request) {
-	tmpl := buildStaticTemplate(w, []string{"ui/html/search.html", "ui/html/base.html"}...)
+	tmpl := template.Must(template.ParseFiles([]string{"ui/html/search.html", "ui/html/base.html"}...))
 	if err := tmpl.Execute(w, nil); err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
 }
 
 func addView(w http.ResponseWriter, r *http.Request) {
-	tmpl := buildStaticTemplate(w, []string{"ui/html/add.html", "ui/html/base.html"}...)
+	tmpl := template.Must(template.ParseFiles([]string{"ui/html/add.html", "ui/html/base.html"}...))
 	if err := tmpl.Execute(w, nil); err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
@@ -133,8 +133,7 @@ func deleteView(w http.ResponseWriter, r *http.Request) {
 	sort.SliceStable(docs, func(i, j int) bool {
 		return docs[i].URL < docs[j].URL
 	})
-
-	tmpl := buildStaticTemplate(w, []string{"ui/html/delete.html", "ui/html/base.html"}...)
+	tmpl := template.Must(template.ParseFiles([]string{"ui/html/delete.html", "ui/html/base.html"}...))
 	if err := tmpl.Execute(w, docsToTemplateDocs(docs)); err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 	}
@@ -153,24 +152,8 @@ func marshall(w http.ResponseWriter, v interface{}) error {
 	return json.NewEncoder(w).Encode(v)
 }
 
-func buildStaticTemplate(w http.ResponseWriter, file ...string) *template.Template {
-	b := make([]byte, 0)
-	for _, f := range file {
-		d, err := internal.Asset(f)
-		if err != nil {
-			http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
-		}
-		b = append(b, d...)
-	}
-	temp, err := template.New("").Parse(string(b))
-	if err != nil {
-		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
-	}
-	return temp
-}
-
-func renderTemplate(w http.ResponseWriter, data interface{}, file string) error {
-	tmpl := buildStaticTemplate(w, file)
+func renderTemplate(w http.ResponseWriter, data interface{}, files... string) error {
+	tmpl := template.Must(template.ParseFiles(files...))
 	w.Header().Set(ContentType, ContentTypeHTML)
 	return tmpl.Execute(w, data)
 }
