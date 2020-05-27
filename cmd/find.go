@@ -13,7 +13,7 @@ var returnAll bool
 func init() {
 	var find = &cobra.Command{
 		Use:   "find",
-		Short: "Searches urls",
+		Short: "Searches for urls",
 		Long: "The find command searches the index against a provided query. " +
 			"Regex search syntax is supported",
 		Run: func(cmd *cobra.Command, args []string) {
