@@ -5,7 +5,7 @@ Bobolink is a small tool that allows you to save links and search for them later
 
 `go get -u github.com/jtanza/bobolink` 
 
-Bobolink requires an index to manage stored text. The path to this index can either be passed explicitly with each invocation of bobolink e.g.`--index-path=/opt/bobolink` or can be set once via the env variable `BOBOLINK_DIR=/opt/bobolink`
+Bobolink requires an index to manage stored text. The path to this index can either be passed explicitly with each invocation of bobolink e.g.`--index-path /opt/bobolink` or can be set once via the env variable `BOBOLINK_DIR=/opt/bobolink`
 
 This directory can of course be anywhere you'd like, but I personally use `/opt/bobolink`.
 
