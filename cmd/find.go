@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/blevesearch/bleve/search/highlight/format/ansi"
 	"github.com/jtanza/bobolink/internal"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 var returnAll bool
