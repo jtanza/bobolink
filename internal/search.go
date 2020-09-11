@@ -2,12 +2,13 @@ package internal
 
 import (
 	"fmt"
-	"github.com/blevesearch/bleve"
-	_ "github.com/blevesearch/bleve/search/highlight/highlighter/ansi"
-	_ "github.com/blevesearch/bleve/search/highlight/highlighter/html"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/blevesearch/bleve"
+	_ "github.com/blevesearch/bleve/search/highlight/highlighter/ansi"
+	_ "github.com/blevesearch/bleve/search/highlight/highlighter/html"
 )
 
 const indexFile = "index.bleve"
@@ -40,6 +41,7 @@ func (s Search) AddResources(resources []string) ([]Document, error) {
 
 	b := s.index.NewBatch()
 	for _, d := range docs {
+		fmt.Printf("indexing %s...\n", d.URL)
 		if err := b.Index(d.ID, d); err != nil {
 			log.Fatal(err)
 		}
@@ -59,8 +61,8 @@ func (s Search) Query(q string) ([]Document, error) {
 // QueryWithHighlight searches for query q against our Document index,
 // while providing the highlights specified by highlight.
 func (s Search) QueryWithHighlight(q string, highlight string) ([]Document, error) {
-	mq := bleve.NewQueryStringQuery(q)
-	r := bleve.NewSearchRequest(mq)
+	qsq := bleve.NewQueryStringQuery(q)
+	r := bleve.NewSearchRequest(qsq)
 
 	if highlight != "" {
 		r.Highlight = bleve.NewHighlightWithStyle(highlight)
@@ -98,6 +100,7 @@ func (s Search) Delete(urls []string) ([]string, error) {
 }
 
 func search(r *bleve.SearchRequest, i bleve.Index) ([]Document, error) {
+	r.Size = int((^uint(0) >> 1)) // maxint
 	search, err := i.Search(r)
 	if err != nil {
 		return nil, err
