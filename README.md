@@ -32,15 +32,15 @@ Use "bobolink [command] --help" for more information about a command.
 #### Some Examples
 ```
 $ # adding new links is easy
-$ bobolink --index-path /opt/bobolink/ add https://web.stanford.edu/class/cs101/bits-gigabytes.html
+$ bobolink --index-path /opt/bobolink add https://web.stanford.edu/class/cs101/bits-gigabytes.html
+
+$ # matching text is highlighted in the terminal (can't be seen here)
+$ bobolink --index-path /opt/bobolink find tera*
+URL: https://web.stanford.edu/class/cs101/bits-gigabytes.html
+Match: …ytes Gigabytes Terabytes Kilobytes Megabytes Gigabytes Terabytes The size of information in the computer is measured in kilobytes, megabytes, gigabytes, and terabytes. In this section, we'll look at c…
 
 $ # set env var to avoid having to pass --index-path with each invocation
 $ export BOBOLINK_DIR=/opt/bobolink
-
-$ # matching text is highlighted in the terminal (can't be seen here)
-$ bobolink find tera*
-URL: https://web.stanford.edu/class/cs101/bits-gigabytes.html
-Match: …ytes Gigabytes Terabytes Kilobytes Megabytes Gigabytes Terabytes The size of information in the computer is measured in kilobytes, megabytes, gigabytes, and terabytes. In this section, we'll look at c…
 
 $ # backup all your bookmarked urls
 $ bobolink add https://en.wikipedia.org/wiki/Protection_ring
