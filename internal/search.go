@@ -41,7 +41,6 @@ func (s Search) AddResources(resources []string) ([]Document, error) {
 
 	b := s.index.NewBatch()
 	for _, d := range docs {
-		fmt.Printf("indexing %s...\n", d.URL)
 		if err := b.Index(d.ID, d); err != nil {
 			log.Fatal(err)
 		}
