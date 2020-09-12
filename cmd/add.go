@@ -20,11 +20,6 @@ func init() {
 		Use:   "add",
 		Short: "Adds urls to store",
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 0 {
-				fmt.Printf("Please provide a URL to index.\n\n")
-				cmd.Help()
-			}
-
 			if dryRun {
 				docs, err := internal.Convert(args)
 				if err != nil {
