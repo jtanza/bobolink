@@ -49,7 +49,7 @@ func (s Search) AddResources(resources []string) ([]Document, error) {
 		return nil, err
 	}
 
-	fmt.Printf("successfully added %d resources to index.\n", len(docs))
+	fmt.Printf("successfully added %d resource\\s to index.\n", len(docs))
 	return docs, nil
 }
 
