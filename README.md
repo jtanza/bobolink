@@ -35,8 +35,9 @@ $ # adding new links is easy
 $ bobolink --index-path /opt/bobolink add https://web.stanford.edu/class/cs101/bits-gigabytes.html
 $ successfully added 1 resource\s to index.
 
-$ # matching text is highlighted in the terminal (can't be seen here)
+$ # search your saved bookmarks. matching text is highlighted in the terminal (can't be seen here)
 $ bobolink --index-path /opt/bobolink find tera*
+
 URL: https://web.stanford.edu/class/cs101/bits-gigabytes.html
 Match: …ytes Gigabytes Terabytes Kilobytes Megabytes Gigabytes Terabytes The size of information in the computer is measured in kilobytes, megabytes, gigabytes, and terabytes. In this section, we'll look at c…
 
