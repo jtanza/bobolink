@@ -5,7 +5,10 @@
 *.so
 *.dylib
 
-./target/*
+/target
+/db
+.lein-repl-history
+notes.txt
 
 # Test binary, built with `go test -c`
 *.test

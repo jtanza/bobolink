@@ -1,27 +1,41 @@
 (ns bobolink.handler
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
+            [ring.middleware.basic-authentication :refer [wrap-basic-authentication]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
-            [ring.util.response :refer [response]]
+            [ring.util.response :as response]
             [bobolink.api :as api]))
 
-(defn get-in-req
-  [request key]
-  (get-in request [:body key]))
-
 (defroutes app-routes
+  (GET "/bookmarks" [userid]
+       (api/get-bookmarks userid))
   (PUT "/bookmarks" req
-       (response (api/add-bookmarks {} (get-in-req req :urls))))  
+       (api/add-bookmarks (:body req)))
   (DELETE "/bookmarks" req)
-  (GET "/bookmarks/search" req)
+  (POST "/bookmarks/search" req)
+  (GET "/users/:id" [id]
+       (api/get-user id))
   (POST "/users" req
-        (api/add-user (get-in-req req :user)))
-  (GET "/users" req)
+        (api/add-user (:body req)))
   (route/not-found "Not Found"))
 
+(defroutes unprotected-routes
+  (GET "/token" req
+       (api/gen-token (get-in req [:headers :authorization]))))
+
+(defn authenticated?
+  [userid token]
+  (api/authenticated? userid token))
+
 (def app
-  (-> (wrap-defaults app-routes api-defaults)
-      (wrap-json-body {:keywords? true})
-      (wrap-json-response)))
+  (routes
+   (-> (wrap-defaults unprotected-routes api-defaults)
+        (wrap-json-body {:keywords? true})
+        (wrap-json-response))
+    (-> (wrap-defaults app-routes api-defaults)
+        (wrap-json-body {:keywords? true})
+        (wrap-json-response)
+        (wrap-basic-authentication authenticated?))))
+
 
