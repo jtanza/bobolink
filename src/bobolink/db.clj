@@ -7,17 +7,12 @@
   [user]
   (first (jdbc/insert! db-spec :user user)))
 
-(comment (defn get-user
-   [email]
-   (jdbc/query db-spec ["select id, email, from user where email = ?" email])))
-
 (defn get-user
   [creds]
-  (let [query #(vector (str "select id, email from user where " %1 " = ?") %2)]
-    (jdbc/query db-spec
-                (cond
-                  (contains? creds :email) (query "email" (:email creds))
-                  (contains? creds :id) (query "id" (:id creds))))))
+  (let [{:keys [email id]} creds]
+    (first (jdbc/query db-spec (if email
+                                 ["select id, email from user where email = ?", email]
+                                 ["select id, email from user where id = ?", id])))))
 
 (defn get-user-full
   [email]
@@ -29,11 +24,13 @@
     (jdbc/update! db-spec :token {:userid userid :token token} ["userid = ?" userid])))
 
 (defn get-auth-token
-  [userid]
-  (->> ["select userid, authtoken from token where userid = ?" userid]
-      (jdbc/query db-spec)
-      (first)))
+  [user]
+  (when (seq user)
+    (->> ["select userid, authtoken from token where userid = ?" (:id user)]
+         (jdbc/query db-spec)
+         (first))))
 
+;; TODO this should take a `user`
 (defn add-bookmarks
   [req]
   (let [id (:userid req)
@@ -44,4 +41,3 @@
 (defn get-bookmarks
   [userid]
   (jdbc/query db-spec ["select url from bookmark where userid = ?", userid]))
-

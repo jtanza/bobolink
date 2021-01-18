@@ -42,9 +42,12 @@
          (interleave coll (str/split (String. (.decode (Base64/getDecoder) x)) #":"))))
 
 (defn authenticated?
-  [userid token]
-  (= token (:authtoken (db/get-auth-token userid))))
+  [email token]
+  (let [user (db/get-user {:email email})]
+    (= token (:authtoken (db/get-auth-token user)))))
 
+;; TODO persist auth token
+;; TODO add expiration
 (defn get-token
   [auth]
   (if (valid-creds? (decode auth [:email :password]))
@@ -52,8 +55,8 @@
       (response/bad-request "could not validate user")))
 
 (defn get-user
-  [userid]
-  (response/response (db/get-user {:userid userid})))
+  [creds]
+  (response/response (db/get-user creds)))
 
 (defn add-user
   [user]

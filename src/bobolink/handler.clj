@@ -15,7 +15,7 @@
   (DELETE "/bookmarks" req)
   (POST "/bookmarks/search" req)
   (GET "/users/:id" [id]
-       (api/get-user id))
+       (api/get-user {:id id}))
   
   (route/not-found "Not Found"))
 
