@@ -16,13 +16,17 @@
   (POST "/bookmarks/search" req)
   (GET "/users/:id" [id]
        (api/get-user id))
-  (POST "/users" req
-        (api/add-user (:body req)))
+  
   (route/not-found "Not Found"))
 
 (defroutes unprotected-routes
   (GET "/token" req
-       (api/gen-token (get-in req [:headers :authorization]))))
+       (api/get-token (-> (:headers req)
+                          (get "authorization")
+                          (clojure.string/split #" ")
+                          (last))))
+  (POST "/users" req
+        (api/add-user (:body req))))
 
 (defn authenticated?
   [userid token]

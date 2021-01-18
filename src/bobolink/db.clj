@@ -21,7 +21,7 @@
 
 (defn get-user-full
   [email]
-  (jdbc/query db-spec ["select id, email, password from user where email = ?" email]))
+  (first (jdbc/query db-spec ["select id, email, password from user where email = ?" email])))
 
 (defn set-auth-token
   [user token]
