@@ -8,7 +8,8 @@
             [crypto.password.bcrypt :as password]
             [ring.util.response :as response]))
 
-(def index-cache {}) ;; tmp map cache
+;; tmp map cache
+(def index-cache {})
 
 ;; TODO handle bad urls
 (defn- extract-text
@@ -31,10 +32,11 @@
     (.nextBytes rndm buffer)
     (.encodeToString base64 buffer)))
 
-(defn- valid-creds?
+(defn- user-from-creds
   [creds]
-  (let [user (db/get-user-full (:email creds))]
-    (password/check (:password creds) (:password user))))
+  (if-let [user (db/get-user-full (:email creds))]
+    (when (password/check (:password creds) (:password user))
+      (dissoc user :password))))
 
 (defn- decode
   [x coll]
@@ -46,13 +48,13 @@
   (let [user (db/get-user {:email email})]
     (= token (:authtoken (db/get-auth-token user)))))
 
-;; TODO persist auth token
-;; TODO add expiration
 (defn get-token
   [auth]
-  (if (valid-creds? (decode auth [:email :password]))
-      (response/response (gen-token))
-      (response/bad-request "could not validate user")))
+  (if-let [user (user-from-creds (decode auth [:email :password]))]
+    (let [token (gen-token)]
+      (db/set-auth-token user token)
+      (response/response token))
+    (response/bad-request "could not validate user")))
 
 (defn get-user
   [creds]

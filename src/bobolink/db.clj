@@ -21,7 +21,7 @@
 (defn set-auth-token
   [user token]
   (let [userid (:id user)]
-    (jdbc/update! db-spec :token {:userid userid :token token} ["userid = ?" userid])))
+    (jdbc/update! db-spec :token {:userid userid :authtoken token} ["userid = ?" userid])))
 
 (defn get-auth-token
   [user]
