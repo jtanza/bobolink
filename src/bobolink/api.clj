@@ -45,8 +45,10 @@
 
 (defn authenticated?
   [email token]
-  (let [user (db/get-user {:email email})]
-    (= token (:authtoken (db/get-auth-token user)))))
+  (= token (-> {:email email}
+               (db/get-user)
+               (db/get-auth-token)
+               (:authtoken))))
 
 (defn get-token
   [auth]

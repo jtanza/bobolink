@@ -20,13 +20,13 @@
   (route/not-found "Not Found"))
 
 (defroutes unprotected-routes
+  (POST "/users" req
+        (api/add-user (:body req)))
   (GET "/token" req
        (api/get-token (-> (:headers req)
                           (get "authorization")
                           (clojure.string/split #" ")
-                          (last))))
-  (POST "/users" req
-        (api/add-user (:body req))))
+                          (last)))))
 
 (defn authenticated?
   [userid token]

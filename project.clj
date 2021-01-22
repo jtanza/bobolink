@@ -9,6 +9,7 @@
                  [compojure "1.6.1"]
                  [crypto-password "0.2.1"]
                  [org.jsoup/jsoup "1.7.3"]
+                 [org.postgresql/postgresql "42.1.4"]
                  [ring-basic-authentication "1.1.0"]
                  [ring/ring-core "1.8.2"]
                  [ring/ring-defaults "0.3.2"]
