@@ -54,8 +54,8 @@
     (response/bad-request "could not validate user")))
 
 (defn get-user
-  [id]
-  (response/response (db/get-user {:id id})))
+  [user]
+  (response/response (db/get-user user)))
 
 (defn add-user
   [creds]
@@ -65,8 +65,8 @@
     (response/bad-request "email or password missing")))
 
 (defn get-bookmarks
-  [username]
-  (response/response (map :url (db/get-bookmarks username))))
+  [userid]
+  (response/response (map :url (db/get-bookmarks {:id (Integer/parseInt userid)}))))
 
 (comment (defn add-bookmarks
            [user urls]

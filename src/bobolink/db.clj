@@ -43,5 +43,5 @@
     (jdbc/insert-multi! db-spec "bookmark" ["userid" "url"] rows)))
 
 (defn get-bookmarks
-  [userid]
-  (jdbc/query db-spec ["select url from bookmark where userid = ?" userid]))
+  [user]
+  (jdbc/query db-spec ["select url from bookmark where userid = ?" (:id user)]))

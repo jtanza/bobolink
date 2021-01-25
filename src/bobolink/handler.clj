@@ -29,8 +29,13 @@
        (api/add-bookmarks (:email (auth-from-req req)) (get-in req [:body :urls])))
   (DELETE "/bookmarks" req)
   (POST "/bookmarks/search" req)
+  (GET "/users" req
+       (let [email (:email (auth-from-req req))]
+         (if (= email (get-in req [:params :email]))
+           (api/get-user {:email email})
+           (response/not-found "Not Found"))))
   (GET "/users/:id" [id]
-       (api/get-user id))
+       (api/get-user {:id id}))
   (route/not-found "Not Found"))
 
 (defroutes public-routes
