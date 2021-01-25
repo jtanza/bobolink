@@ -35,13 +35,8 @@
 (defn- user-from-creds
   [creds]
   (if-let [user (db/get-user-full (:email creds))]
-    (when (password/check (:password creds) (:password user))
+    (when (password/check (:auth creds) (:password user))
       (dissoc user :password))))
-
-(defn- decode
-  [x coll]
-  (apply assoc {}
-         (interleave coll (str/split (String. (.decode (Base64/getDecoder) x)) #":"))))
 
 (defn authenticated?
   [email token]
@@ -51,34 +46,34 @@
                (:authtoken))))
 
 (defn get-token
-  [auth]
-  (if-let [user (user-from-creds (decode auth [:email :password]))]
+  [creds]
+  (if-let [user (user-from-creds creds)]
     (let [token (gen-token)]
       (db/set-auth-token user token)
       (response/response token))
     (response/bad-request "could not validate user")))
 
 (defn get-user
-  [creds]
-  (response/response (db/get-user creds)))
+  [id]
+  (response/response (db/get-user {:id id})))
 
 (defn add-user
-  [user]
-  (if (not-any? str/blank? [(:email user) (:password user)])    
-    (let [user (db/create-user (update user :password password/encrypt))]
+  [creds]
+  (if (not-any? str/blank? [(:email creds) (:password creds)])
+    (if-let [user (db/create-user (update creds :password password/encrypt))]
       (response/created (str "/users/" (:id user))))
     (response/bad-request "email or password missing")))
 
 (defn get-bookmarks
-  [userid]
-  (response/response (map :url (db/get-bookmarks userid))))
+  [username]
+  (response/response (map :url (db/get-bookmarks username))))
 
 (comment (defn add-bookmarks
            [user urls]
            (map #(add-to-index user % (extract-text %)) urls)))
 
 (defn add-bookmarks
-  [req]
+  [username urls]
   ;; update indexes. both remote and in cache
-  (response/response (db/add-bookmarks req)))
+  (response/response (db/add-bookmarks (db/get-user {:email username}) urls)))
 

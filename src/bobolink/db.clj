@@ -11,8 +11,8 @@
   [creds]
   (let [{:keys [email id]} creds]
     (first (jdbc/query db-spec (if email
-                                 ["select id, email from bobouser where email = ?", email]
-                                 ["select id, email from bobouser where id = ?", id])))))
+                                 ["select id, email from bobouser where email = ?" email]
+                                 ["select id, email from bobouser where id = ?" (Integer/parseInt id)])))))
 
 (defn get-user-full
   [email]
@@ -23,6 +23,12 @@
   (let [userid (:id user)]
     (jdbc/update! db-spec :token {:userid userid :authtoken token} ["userid = ?" userid])))
 
+(defn set-auth-token
+  [user token]
+  (let [userid (:id user)]
+    (jdbc/execute! db-spec ["insert into token values (?, ?) on conflict (userid) do update set authtoken = ?"
+                            userid token token])))
+
 (defn get-auth-token
   [user]
   (when (seq user)
@@ -30,14 +36,12 @@
          (jdbc/query db-spec)
          (first))))
 
-;; TODO this should take a `user`
 (defn add-bookmarks
-  [req]
-  (let [id (:userid req)
-        rows (for [url (:urls req)]
-               (vector id url))]
-    (jdbc/insert-multi! db-spec "bookmark" ["userid", "url"] rows)))
+  [user urls]
+  (let [id (:id user)
+        rows (for [url urls] (vector id url))]
+    (jdbc/insert-multi! db-spec "bookmark" ["userid" "url"] rows)))
 
 (defn get-bookmarks
   [userid]
-  (jdbc/query db-spec ["select url from bookmark where userid = ?", userid]))
+  (jdbc/query db-spec ["select url from bookmark where userid = ?" userid]))
