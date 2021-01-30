@@ -20,14 +20,9 @@
 
 (defn set-auth-token
   [user token]
-  (let [userid (:id user)]
-    (jdbc/update! db-spec :token {:userid userid :authtoken token} ["userid = ?" userid])))
-
-(defn set-auth-token
-  [user token]
-  (let [userid (:id user)]
+  (let [{:keys [id]} user]
     (jdbc/execute! db-spec ["insert into token values (?, ?) on conflict (userid) do update set authtoken = excluded.authtoken"
-                            userid token])))
+                            id token])))
 
 (defn get-auth-token
   [user]
@@ -38,7 +33,7 @@
 
 (defn add-bookmarks
   [user urls]
-  (let [userid (:id user)]
+  (let [{userid :id} user]
     (doseq [url urls]
       (jdbc/execute! db-spec ["insert into bookmark values (?, ?) on conflict (userid, url) do nothing" userid url]))))
 

@@ -57,10 +57,11 @@
   (if (< 50 (count urls))
     (response/bad-request "Exceeded 50 bookmark limit")
     (try
-      (let [bookmarks (map #(hash-map :url % :content (search/extract-text %)) urls)
+      (let [user (db/get-user {:email username})
+            bookmarks (map (partial search/gen-bookmark user) urls)
             valid-urls (map :url bookmarks)]
         (if (seq valid-urls)
-          (do (db/add-bookmarks (db/get-user {:email username}) valid-urls)
+          (do (db/add-bookmarks user valid-urls)
               (search/update-store bookmarks)
               (response/response valid-urls))
           (response/bad-request "Could not gather content from bookmarks")))
