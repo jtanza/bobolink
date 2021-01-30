@@ -3,27 +3,11 @@
            (java.security SecureRandom)
            (java.util Base64))
   (:require [bobolink.db :as db]
+            [bobolink.search :as search]
             [clojure.string :as str]
             [clucy.core :as clucy]            
             [crypto.password.bcrypt :as password]
             [ring.util.response :as response]))
-
-;; tmp map cache
-(def index-cache {})
-
-;; TODO handle bad urls
-(defn- extract-text
-  [urls]
-  (map #(.text (.body (Jsoup/parse (slurp %)))) urls))
-
-;; TODO write through cache
-(defn- add-to-index
-  [user url content]
-  (let [index (get index-cache user (clucy/memory-index))]
-    (clucy/add index
-               {:user user
-                :url url
-                :content content})))
 
 (defn- gen-token []
   (let [rndm (SecureRandom.)
@@ -68,12 +52,18 @@
   [userid]
   (response/response (map :url (db/get-bookmarks {:id (Integer/parseInt userid)}))))
 
-(comment (defn add-bookmarks
-           [user urls]
-           (map #(add-to-index user % (extract-text %)) urls)))
-
 (defn add-bookmarks
   [username urls]
-  ;; update indexes. both remote and in cache
-  (response/response (db/add-bookmarks (db/get-user {:email username}) urls)))
+  (if (< 50 (count urls))
+    (response/bad-request "Exceeded 50 bookmark limit")
+    (try
+      (let [bookmarks (map #(hash-map :url % :content (search/extract-text %)) urls)
+            valid-urls (map :url bookmarks)]
+        (if (seq valid-urls)
+          (do (db/add-bookmarks (db/get-user {:email username}) valid-urls)
+              (search/update-store bookmarks)
+              (response/response valid-urls))
+          (response/bad-request "Could not gather content from bookmarks")))
+      (catch Exception e (response/bad-request (str "Error adding bookmarks: " (.getMessage e)))))))
+
 

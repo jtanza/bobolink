@@ -26,8 +26,8 @@
 (defn set-auth-token
   [user token]
   (let [userid (:id user)]
-    (jdbc/execute! db-spec ["insert into token values (?, ?) on conflict (userid) do update set authtoken = ?"
-                            userid token token])))
+    (jdbc/execute! db-spec ["insert into token values (?, ?) on conflict (userid) do update set authtoken = excluded.authtoken"
+                            userid token])))
 
 (defn get-auth-token
   [user]
@@ -38,10 +38,11 @@
 
 (defn add-bookmarks
   [user urls]
-  (let [id (:id user)
-        rows (for [url urls] (vector id url))]
-    (jdbc/insert-multi! db-spec "bookmark" ["userid" "url"] rows)))
+  (let [userid (:id user)]
+    (doseq [url urls]
+      (jdbc/execute! db-spec ["insert into bookmark values (?, ?) on conflict (userid, url) do nothing" userid url]))))
 
 (defn get-bookmarks
   [user]
   (jdbc/query db-spec ["select url from bookmark where userid = ?" (:id user)]))
+
