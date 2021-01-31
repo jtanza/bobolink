@@ -62,7 +62,7 @@
             valid-urls (map :url bookmarks)]
         (if (seq valid-urls)
           (do (db/add-bookmarks user valid-urls)
-              (search/update-store bookmarks)
+              (search/save-bookmarks bookmarks)
               (response/response valid-urls))
           (response/bad-request "Could not gather content from bookmarks")))
       (catch Exception e (response/bad-request (str "Error adding bookmarks: " (.getMessage e)))))))
