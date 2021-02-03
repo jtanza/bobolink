@@ -5,12 +5,8 @@
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/core.cache "1.0.207"]
                  [org.clojure/java.jdbc "0.6.0"]
-                 [clucy "0.4.0"]
-                 [com.cognitect.aws/api "0.8.498"
-                  :exclusions [org.eclipse.jetty/jetty-http
-                               org.eclipse.jetty/jetty-util]]
-                 [com.cognitect.aws/endpoints "1.1.11.934"]
-                 [com.cognitect.aws/s3 "810.2.817.0"]
+                 [clucie "0.4.2"]
+                 [amazonica "0.3.153"]
                  [com.h2database/h2 "1.4.200"]
                  [compojure "1.6.1"]
                  [crypto-password "0.2.1"]
