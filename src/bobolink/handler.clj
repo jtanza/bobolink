@@ -10,12 +10,16 @@
             [bobolink.api :as api]))
 
 (defn- decode-auth
+  "Parses a Base64 encoded string into a map containing the provided `:email` and `:auth`
+  values."
   [auth]
   (apply assoc {}
          (interleave [:email :auth]
                      (str/split (String. (.decode (Base64/getDecoder) auth)) #":"))))
 
 (defn- auth-from-req
+  "Converts a Base64 encoded Authorization header into a map containing the associated
+  user and authtoken."
   [req]
   (-> (get-in req [:headers "authorization"])
       (str/split #" ")

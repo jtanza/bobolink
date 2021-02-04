@@ -8,6 +8,8 @@
   (first (jdbc/insert! db-spec :bobouser user)))
 
 (defn get-user
+  "Returns the user represented by `creds` in the DB.
+  Will attempt to fetch by either a user's email or userid."
   [creds]
   (let [{:keys [email id]} creds]
     (first (jdbc/query db-spec (if email
@@ -15,10 +17,13 @@
                                  ["select id, email from bobouser where id = ?" (Integer/parseInt id)])))))
 
 (defn get-user-full
+  "Returns all columns associated with a user in the DB.
+  Other functions returning users purposefully omit password data."
   [email]
   (first (jdbc/query db-spec ["select id, email, password from bobouser where email = ?" email])))
 
 (defn set-auth-token
+  "Upserts an authentication token associated with a `user`."
   [user token]
   (let [{:keys [id]} user]
     (jdbc/execute! db-spec ["insert into token values (?, ?) on conflict (userid) do update set authtoken = excluded.authtoken"
@@ -39,5 +44,4 @@
 
 (defn get-bookmarks
   [user]
-  (jdbc/query db-spec ["select url from bookmark where userid = ?" (:id user)]))
-
+  (map :url (jdbc/query db-spec ["select url from bookmark where userid = ?" (:id user)])))

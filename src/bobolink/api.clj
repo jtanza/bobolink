@@ -5,11 +5,11 @@
   (:require [bobolink.db :as db]
             [bobolink.search :as search]
             [clojure.string :as str]
-            [clucy.core :as clucy]            
             [crypto.password.bcrypt :as password]
             [ring.util.response :as response]))
 
 (defn- gen-token []
+  "Generates a \"random\" API authtoken."
   (let [rndm (SecureRandom.)
         base64 (.withoutPadding (Base64/getUrlEncoder))
         buffer (byte-array 32)]
@@ -23,6 +23,7 @@
       (dissoc user :password))))
 
 (defn authenticated?
+  "Determines whether the provided `token` matches a user's stored authtoken."
   [email token]
   (= token (-> {:email email}
                (db/get-user)
@@ -30,6 +31,7 @@
                (:authtoken))))
 
 (defn get-token
+  "Returns a user's stored authtoken."
   [creds]
   (if-let [user (user-from-creds creds)]
     (let [token (gen-token)]
@@ -42,6 +44,7 @@
   (response/response (db/get-user user)))
 
 (defn add-user
+  "Creates a new bobolink user."
   [creds]
   (if (not-any? str/blank? [(:email creds) (:password creds)])
     (if-let [user (db/create-user (update creds :password password/encrypt))]
@@ -53,6 +56,7 @@
   (response/response (map :url (db/get-bookmarks {:id (Integer/parseInt userid)}))))
 
 (defn add-bookmarks
+  "Adds bookmarks from a list of request `urls` to a user's collection."
   [username urls]
   (if (< 50 (count urls))
     (response/bad-request "Exceeded 50 bookmark limit")
