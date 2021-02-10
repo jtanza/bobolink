@@ -32,7 +32,7 @@
   (PUT "/bookmarks" req
        (api/add-bookmarks (:email (auth-from-req req)) (get-in req [:body :urls])))
   (DELETE "/bookmarks" req)
-  (POST "/bookmarks/search" req)
+  (POST "/bookmarks/search" req (api/search-bookmarks (:email (auth-from-req req)) (:body req)))
   (GET "/users" req
        (let [email (:email (auth-from-req req))]
          (if (= email (get-in req [:params :email]))

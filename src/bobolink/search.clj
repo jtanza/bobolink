@@ -1,14 +1,14 @@
 (ns bobolink.search
   (:import (org.jsoup Jsoup)
-           (java.util.zip ZipEntry ZipOutputStream ZipInputStream))
+           (java.util.zip ZipEntry ZipOutputStream ZipInputStream)
+           (org.apache.lucene.search.highlight Highlighter QueryScorer
+                                               SimpleHTMLFormatter))
   (:require [bobolink.db :as db]
+            [bobolink.lucene :as lucene]
             [amazonica.aws.s3 :as s3]
             [clojure.core.cache.wrapped :as cache]
             [clojure.java.io :as io]
-            [clojure.string :as str]
-            [clucie.core :as clucie-core]
-            [clucie.analysis :as clucie-analysis]
-            [clucie.store :as clucie-store]))
+            [clojure.string :as str]))
 
 (def stop-words (-> "stop-words" io/resource slurp str/split-lines set))
 
@@ -29,21 +29,16 @@
 
 (defn gen-bookmark
   [user url]
-  (if-not (empty? url) (hash-map :user user :url url :content (get-content url))))
+  (if-not (empty? url) (hash-map :userid (:id user) :url url :content (get-content url))))
 
 (def index-cache
   "In memory cache holding our active Lucene indexes."
   (cache/lru-cache-factory {}))
 
-(def analyzer (clucie-analysis/standard-analyzer))
-
-(defn- run-at-interval
-  [f interval]
-  (future (while true
-            (do (Thread/sleep interval)
-                (try (f)
-                     (catch Exception e
-                       (prn e)))))))
+(defn- add-to-index
+  "Adds a `bookmark` to a users associated search `index`."
+  [index bookmark]
+  (lucene/add! index (vector (update bookmark :user #(apply (partial dissoc %) #{:email :password})))))
 
 (defn- delete-dir
   "Recursively deletes the directory located at `file`."
@@ -53,37 +48,13 @@
       (delete-dir f)))
   (io/delete-file file))
 
-(defn- delete-stale-indexes []
-  "Purges disk of indexes that were once held in our `[[index-cache]]` but have since been evicted."
-  (let [disk-indexes (into {} (map #(let [path (.toString %)]
-                                      (-> (subs path (inc (str/last-index-of path "/")) (count path))
-                                          (keyword)
-                                          (vector %)))
-                                   (.listFiles (io/file "./index/"))))]
-    (doseq [id (keys disk-indexes)]
-      (print id)
-      (when-not (cache/has? index-cache id)
-        (delete-dir (get disk-indexes id))))))
-
-(def index-reaper
-  "Runs `[[delete-stale-indexes]]` in a background thread every twenty minutes."
-  (run-at-interval delete-stale-indexes 60000))
-
-(defn- add-to-index
-  "Adds a `bookmark` to a users associated Lucene `index`."
-  [index bookmark]
-  (clucie-core/add! index
-                    (vector (update bookmark :user #(apply (partial dissoc %) #{:email :password})))
-                    (keys bookmark)
-                    analyzer))
-
 (defn- build-index
   "Attempts to build a Lucene index from a `user`s saved bookmarks."
   [user]
   (let [dir (io/file (str "./index/" (:id user)))]
     (when (.exists dir)
       (delete-dir dir))
-    (let [index (clucie-store/disk-store dir)
+    (let [index (lucene/disk-index dir)
         bookmarks (map (partial gen-bookmark user) (db/get-bookmarks user))]
     (doseq [bookmark bookmarks] (add-to-index index bookmark))
     index)))
@@ -119,14 +90,15 @@
   "Attempts to download a `user`s associated Lucene index stored on AWS S3."
   [user]
   (try
-    (-> (s3/get-object {:bucket-name "bobo-index" :key (user->key user)})
-        (:input-stream)
-        (uncompress-index (str "./index/" (:id user) "/"))
-        (.getAbsolutePath)
-        (clucie-store/disk-store))
+    nil
+    (comment (-> (s3/get-object {:bucket-name "bobo-index" :key (user->key user)})
+         (:input-stream)
+         (uncompress-index (str "./index/" (:id user) "/"))
+         (.getAbsolutePath)
+         (lucene/disk-index)))
     (catch Exception e
       (let [m (amazonica.core/ex->map e)]
-        (when-not  (= 404 (:status-code m)) ;; swallow 404s as theyre expected for new users
+        (when-not (= 404 (:status-code m)) ;; swallow 404s as theyre expected for new users
           (prn amazonica.core/ex->map e))))))
 
 (defn- user->cache-key
@@ -135,7 +107,7 @@
 
 (defn- get-index
   "Retrieves a `user`s associated index from the `[[index-cache]]`.
-  On a cache miss will first attempty to fetch a remote index on S3. If no such index
+  On a cache miss will first attempt to fetch a remote index on S3. If no such index
   exists, will build an index directly with a user's saved bookmarks."
   [user]
   (cache/lookup-or-miss index-cache (user->cache-key user)
@@ -166,10 +138,58 @@
 (defn save-bookmarks
   "Adds `bookmarks` to a user's saved bookmarks collection.
   Also updates the `index-cache` and the user's remote index on S3."
-  [bookmarks]
-  (let [{:keys [user]} (first bookmarks)
-        index (get-index user)]
-    (doseq [bookmark bookmarks] (add-to-index index bookmark))
+  [user bookmarks]
+  (let [index (get-index user)]
+    (doseq [bookmark bookmarks]
+      (add-to-index index bookmark))
     (update-store user index)
     index))
 
+(defn search-bookmarks
+  "Searches a `user`s saved bookmarks against `query`, applying `f` to the coll of search hits.
+  Returns raw results when no `f` is supplied."
+  ([user query]
+   (search-bookmarks user query #(map identity %)))
+  ([user query f]
+   (f (lucene/search (get-index user) query))))
+
+
+
+
+(comment (let [results (search-bookmarks {:id 2} {:content ["stock"]})]
+   (meta results)))
+(comment
+(def q (clucie.query/parse-form {:content ["stock"]} :mode :qp-query :analyzer analyzer))
+(def s (QueryScorer. q))
+(def h (Highlighter. s))
+(.getBestFragment h analyzer "content" "the content of the stock market here"))
+
+
+
+
+
+(defn- run-at-interval
+  "Executes `f` in a background thread at the provided `interval` in ms."
+  [f interval]
+  (future (while true
+            (do (Thread/sleep interval)
+                (try (f)
+                     (catch Exception e
+                       (prn e)))))))
+
+(defn- delete-stale-indexes []
+  "Purges disk of indexes that were once held in our `[[index-cache]]` but have since been evicted."
+  (let [disk-indexes (into {} (map #(let [path (.toString %)]
+                                      ;; grab userid from index path
+                                      (-> (subs path (inc (str/last-index-of path "/")) (count path))
+                                          (keyword)
+                                          (vector %)))
+                                   (.listFiles (io/file "./index/"))))]
+    (doseq [id (keys disk-indexes)]
+      (when-not (cache/has? index-cache id)
+        (println (str "deleting stale index: " id))
+        (delete-dir (get disk-indexes id))))))
+
+(comment (def index-reaper
+   "Runs `[[delete-stale-indexes]]` in a background thread every twenty minutes."
+   (run-at-interval delete-stale-indexes 60000)))

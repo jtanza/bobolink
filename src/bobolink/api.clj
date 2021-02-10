@@ -71,4 +71,13 @@
           (response/bad-request "Could not gather content from bookmarks")))
       (catch Exception e (response/bad-request (str "Error adding bookmarks: " (.getMessage e)))))))
 
+(defn- request->query
+  [req]
+  (hash-map (keyword (:field req)) (vector (:query req))))
 
+(defn search-bookmarks
+  [username request]
+  (try
+    (response/response
+     (search/search-bookmarks (db/get-user {:email username}) (request->query request)))
+    (catch Exception e (response/bad-request (str "Error searching bookmarks: " (.getMessage e))))))
