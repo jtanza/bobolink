@@ -8,7 +8,7 @@
                  [clucie "0.4.2"]
                  [amazonica "0.3.153"]
                  [org.apache.lucene/lucene-core "8.8.0"]
-                 [org.apache.lucene/lucene-highlighter "7.5.0"]
+                 [org.apache.lucene/lucene-highlighter "8.8.0"]
                  [compojure "1.6.1"]
                  [crypto-password "0.2.1"]
                  [org.jsoup/jsoup "1.7.3"]

@@ -35,11 +35,6 @@
   "In memory cache holding our active Lucene indexes."
   (cache/lru-cache-factory {}))
 
-(defn- add-to-index
-  "Adds a `bookmark` to a users associated search `index`."
-  [index bookmark]
-  (lucene/add! index (vector (update bookmark :user #(apply (partial dissoc %) #{:email :password})))))
-
 (defn- delete-dir
   "Recursively deletes the directory located at `file`."
   [file]
@@ -54,10 +49,9 @@
   (let [dir (io/file (str "./index/" (:id user)))]
     (when (.exists dir)
       (delete-dir dir))
-    (let [index (lucene/disk-index dir)
-        bookmarks (map (partial gen-bookmark user) (db/get-bookmarks user))]
-    (doseq [bookmark bookmarks] (add-to-index index bookmark))
-    index)))
+    (let [index (lucene/disk-index dir)]
+      (lucene/add! index (map (partial gen-bookmark user) (db/get-bookmarks user)))
+      index)))
 
 (defn- ensure-parent-dir
   [path]
@@ -108,7 +102,8 @@
 (defn- get-index
   "Retrieves a `user`s associated index from the `[[index-cache]]`.
   On a cache miss will first attempt to fetch a remote index on S3. If no such index
-  exists, will build an index directly with a user's saved bookmarks."
+  exists, will build an index directly with a user's saved bookmarks, add it to 
+  the cache and return it to the calling function."
   [user]
   (cache/lookup-or-miss index-cache (user->cache-key user)
                         (fn [_] (let [remote-index (fetch-index-remote user)]
@@ -126,47 +121,39 @@
         (.closeEntry zip))))
     (io/file dest)))
 
-(defn- update-store
+(defn- sync-store
   "Synchronizes a `user`s remote index stored on S3 with the provided `index`."
   [user index]
-  (let [index-file (compress-index index user)]
-    (s3/put-object {:bucket-name "bobo-index"
-                    :key (user->key user)
-                    :file (compress-index index user)})
-    (io/delete-file index-file true)))
+  (comment (let [index-file (compress-index index user)]
+     (s3/put-object {:bucket-name "bobo-index"
+                     :key (user->key user)
+                     :file (compress-index index user)})
+     (io/delete-file index-file true))))
 
 (defn save-bookmarks
-  "Adds `bookmarks` to a user's saved bookmarks collection.
-  Also updates the `index-cache` and the user's remote index on S3."
+  "Adds `bookmarks` to a user's `index-cache` along with their remote store on S3."
   [user bookmarks]
   (let [index (get-index user)]
-    (doseq [bookmark bookmarks]
-      (add-to-index index bookmark))
-    (update-store user index)
+    (lucene/add! index bookmarks)
+    (sync-store user index)
     index))
 
+(defn delete-bookmarks
+  "Removes the bookmarks corresponding to the provided `urls` from a
+  user's `index-cache` along with their remote store on S3."
+  [user urls]
+  (let [{userid :id} user
+        index (get-index user)]
+    (lucene/delete! index (map #(hash-map :id %) urls))
+    (sync-store user index)))
+
 (defn search-bookmarks
-  "Searches a `user`s saved bookmarks against `query`, applying `f` to the coll of search hits.
+  "Searches a `user`s saved bookmarks against `search-req`, applying `f` to the coll of search hits.
   Returns raw results when no `f` is supplied."
-  ([user query]
-   (search-bookmarks user query #(map identity %)))
-  ([user query f]
-   (f (lucene/search (get-index user) query))))
-
-
-
-
-(comment (let [results (search-bookmarks {:id 2} {:content ["stock"]})]
-   (meta results)))
-(comment
-(def q (clucie.query/parse-form {:content ["stock"]} :mode :qp-query :analyzer analyzer))
-(def s (QueryScorer. q))
-(def h (Highlighter. s))
-(.getBestFragment h analyzer "content" "the content of the stock market here"))
-
-
-
-
+  ([user search-req]
+   (search-bookmarks user search-req #(map identity %)))
+  ([user search-req f]
+   (f (lucene/search (get-index user) search-req))))
 
 (defn- run-at-interval
   "Executes `f` in a background thread at the provided `interval` in ms."
@@ -175,6 +162,7 @@
             (do (Thread/sleep interval)
                 (try (f)
                      (catch Exception e
+                       ;; TODO logging
                        (prn e)))))))
 
 (defn- delete-stale-indexes []
@@ -192,4 +180,5 @@
 
 (comment (def index-reaper
    "Runs `[[delete-stale-indexes]]` in a background thread every twenty minutes."
-   (run-at-interval delete-stale-indexes 60000)))
+           (run-at-interval delete-stale-indexes 60000)))
+

@@ -37,12 +37,19 @@
          (jdbc/query db-spec)
          (first))))
 
-(defn add-bookmarks
+(defn save-bookmarks
   [user urls]
   (let [{userid :id} user]
     (doseq [url urls]
       (jdbc/execute! db-spec ["insert into bookmark values (?, ?) on conflict (userid, url) do nothing" userid url]))))
 
+(defn delete-bookmarks
+  [user urls]
+  (let [{userid :id} user]
+    (doseq [url urls]
+      (jdbc/delete! db-spec :bookmark ["userid = ? and url = ?" userid url]))))
+
 (defn get-bookmarks
   [user]
-  (map :url (jdbc/query db-spec ["select url from bookmark where userid = ?" (:id user)])))
+  (jdbc/query db-spec ["select url from bookmark where userid = ?" (:id user)]))
+

@@ -64,20 +64,31 @@
       (let [user (db/get-user {:email username})
             bookmarks (map (partial search/gen-bookmark user) urls)
             valid-urls (map :url bookmarks)]
-        (if (seq valid-urls)
-          (do (db/add-bookmarks user valid-urls)
-              (search/save-bookmarks bookmarks)
+        (if (seq valid-urls)          
+          (do (db/save-bookmarks user valid-urls)
+              (search/save-bookmarks user bookmarks)
+              ;; TODO created?
               (response/response valid-urls))
           (response/bad-request "Could not gather content from bookmarks")))
       (catch Exception e (response/bad-request (str "Error adding bookmarks: " (.getMessage e)))))))
 
-(defn- request->query
-  [req]
-  (hash-map (keyword (:field req)) (vector (:query req))))
+(defn delete-bookmarks
+  [username urls]
+  (try
+    (let [user (db/get-user {:email username})]
+      (do (db/delete-bookmarks user urls)
+          (search/delete-bookmarks user urls)
+          ;; TODO return delete urls/ gone?
+          (response/response urls)))
+    ;; TODO logging
+    (catch Exception e
+      (prn e)
+      (response/bad-request (str "error " (.getMessage e))))))
 
 (defn search-bookmarks
-  [username request]
+  [username search-req]
   (try
     (response/response
-     (search/search-bookmarks (db/get-user {:email username}) (request->query request)))
+     (search/search-bookmarks (db/get-user {:email username}) search-req))
+    ;; TODO logging
     (catch Exception e (response/bad-request (str "Error searching bookmarks: " (.getMessage e))))))

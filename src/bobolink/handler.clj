@@ -17,7 +17,7 @@
          (interleave [:email :auth]
                      (str/split (String. (.decode (Base64/getDecoder) auth)) #":"))))
 
-(defn- auth-from-req
+(defn- get-auth
   "Converts a Base64 encoded Authorization header into a map containing the associated
   user and authtoken."
   [req]
@@ -26,27 +26,37 @@
       (last)
       (decode-auth)))
 
+(defn- get-same-user
+  "Attempts to return an email value from a user's request iff it matches
+  their provided authentication, nil otherwise."
+  [req]
+  (let [email (:email (get-auth req))]
+    (if (= email (get-in req [:params :email]))
+      email)))
+
 (defroutes protected-routes
-  (GET "/bookmarks" [userid]
+  (GET "/users/:userid/bookmarks" [userid]
        (api/get-bookmarks userid))
-  (PUT "/bookmarks" req
-       (api/add-bookmarks (:email (auth-from-req req)) (get-in req [:body :urls])))
-  (DELETE "/bookmarks" req)
-  (POST "/bookmarks/search" req (api/search-bookmarks (:email (auth-from-req req)) (:body req)))
-  (GET "/users" req
-       (let [email (:email (auth-from-req req))]
-         (if (= email (get-in req [:params :email]))
-           (api/get-user {:email email})
-           (response/not-found "Not Found"))))
+  (POST "/bookmarks" req
+       (api/add-bookmarks (:email (get-auth req)) (get-in req [:body :urls])))
+  (DELETE "/bookmarks" req
+          (api/delete-bookmarks (:email (get-auth req)) (get-in req [:body :urls])))
+  (POST "/bookmarks/search" req
+        (api/search-bookmarks (:email (get-auth req)) (:body req)))
+  (POST "/users/search" req
+       (if-let [email (get-same-user req)] 
+         (api/get-user {:email email})
+         (response/not-found "Not Found")))
   (GET "/users/:id" [id]
        (api/get-user {:id id}))
   (route/not-found "Not Found"))
 
 (defroutes public-routes
+  ;; TODO handle already created users
   (POST "/users" req
         (api/add-user (:body req)))
   (GET "/token" req
-       (api/get-token (auth-from-req req))))
+       (api/get-token (get-auth req))))
 
 (defn authenticated?
   [userid token]
