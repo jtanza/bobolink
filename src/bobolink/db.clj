@@ -10,7 +10,7 @@
 
 (defn get-user
   "Returns the user represented by `creds` in the DB.
-  Will attempt to fetch by either a user's email or userid."
+  `creds` should be a map containing either a user's email or id"
   [creds]
   (let [{:keys [email id]} creds]
     (first (jdbc/query db-spec (if email

@@ -46,10 +46,15 @@
 (defn add-user
   "Creates a new bobolink user."
   [creds]
-  (if (not-any? str/blank? [(:email creds) (:password creds)])
-    (if-let [user (db/create-user (update creds :password password/encrypt))]
-      (response/created (str "/users/" (:id user))))
-    (response/bad-request "email or password missing")))
+  (if (some str/blank? [(:email creds) (:password creds)])
+    (response/bad-request "email or password missing")
+    (if (not (re-matches #"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$" (:password creds)))
+      (response/bad-request
+       "password must be min 8 chars, have at least one uppercase letter, one lowercase letter and one number")
+      (if (seq (db/get-user creds))
+        (response/bad-request "username taken")
+        (let [user (db/create-user (update creds :password password/encrypt))]
+          (response/created (str "/users/" (:id user))))))))
 
 (defn get-bookmarks
   [userid]
