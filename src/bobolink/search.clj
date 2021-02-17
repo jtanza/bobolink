@@ -77,19 +77,21 @@
     (io/file dest)))
 
 (defn- user->key
+  "Constructs an index object key for use with s3."
   [user]
-  (str (:id user) "-index.zip"))
+  (let [id (:id user)]
+    (str id "/" id "-index.zip")))
 
 (defn- fetch-index-remote
   "Attempts to download a `user`s associated Lucene index stored on AWS S3."
   [user]
   (try
     nil
-    (comment (-> (s3/get-object {:bucket-name "bobo-index" :key (user->key user)})
-         (:input-stream)
-         (uncompress-index (str "./index/" (:id user) "/"))
-         (.getAbsolutePath)
-         (lucene/disk-index)))
+    (-> (s3/get-object {:bucket-name "bobo-index" :key (user->key user)})
+        (:input-stream)
+        (uncompress-index (str "./index/" (:id user) "/"))
+        (.getAbsolutePath)
+        (lucene/disk-index))
     (catch Exception e
       (let [m (amazonica.core/ex->map e)]
         (when-not (= 404 (:status-code m)) ;; swallow 404s as theyre expected for new users
@@ -124,11 +126,11 @@
 (defn- sync-store
   "Synchronizes a `user`s remote index stored on S3 with the provided `index`."
   [user index]
-  (comment (let [index-file (compress-index index user)]
-     (s3/put-object {:bucket-name "bobo-index"
-                     :key (user->key user)
-                     :file (compress-index index user)})
-     (io/delete-file index-file true))))
+  (let [index-file (compress-index index user)]
+    (s3/put-object {:bucket-name "bobo-index"
+                    :key (user->key user)
+                    :file (compress-index index user)})
+    (io/delete-file index-file true)))
 
 (defn save-bookmarks
   "Adds `bookmarks` to a user's `index-cache` along with their remote store on S3."

@@ -21,7 +21,7 @@
       ;; bookmark indexed
       (is (== 1 (count (search-bookmarks user {:query "calendar"}))))
       ;; index synced to s3
-      (is (not (nil? (s3/get-object-metadata {:bucket-name "bobo-index" :key "101-index.zip"}))))))
+      (is (not (nil? (s3/get-object-metadata {:bucket-name "bobo-index" :key "101/101-index.zip"}))))))
 
   (testing "search-bookmarks"
     (let [user {:id 101}
