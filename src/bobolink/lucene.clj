@@ -1,3 +1,4 @@
+
 (ns bobolink.lucene
   (:import (org.apache.lucene.analysis Analyzer)
            (org.apache.lucene.analysis.standard StandardAnalyzer)
@@ -15,12 +16,12 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(def analyzer (StandardAnalyzer.))
+(def ^:private analyzer (StandardAnalyzer.))
 
 (defn disk-index
-  "Creates or opens a lucene index at the provided `file` path."
-  [file]
-  (FSDirectory/open (Paths/get (.toURI file))))
+  "Creates or opens a lucene index at the provided `file-path`."
+  [file-path]
+  (FSDirectory/open (Paths/get (.toURI file-path))))
 
 (defn- entry->field
   [e]

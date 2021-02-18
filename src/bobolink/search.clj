@@ -2,15 +2,18 @@
   (:import (org.jsoup Jsoup)
            (java.util.zip ZipEntry ZipOutputStream ZipInputStream)
            (org.apache.lucene.search.highlight Highlighter QueryScorer
-                                               SimpleHTMLFormatter))
+                                               SimpleHTMLFormatter)
+           (com.amazonaws AmazonServiceException))
   (:require [bobolink.db :as db]
             [bobolink.lucene :as lucene]
             [amazonica.aws.s3 :as s3]
             [clojure.core.cache.wrapped :as cache]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [taoensso.timbre :as timbre
+             :refer [debug info]]))
 
-(def stop-words (-> "stop-words" io/resource slurp str/split-lines set))
+(def ^:private stop-words (-> "stop-words" io/resource slurp str/split-lines set))
 
 (defn- remove-stopwords
   "Removes common english stopwords from the provided `text`."
@@ -31,7 +34,7 @@
   [user url]
   (if-not (empty? url) (hash-map :userid (:id user) :url url :content (get-content url))))
 
-(def index-cache
+(def ^:private index-cache
   "In memory cache holding our active Lucene indexes."
   (cache/lru-cache-factory {}))
 
@@ -50,7 +53,7 @@
     (when (.exists dir)
       (delete-dir dir))
     (let [index (lucene/disk-index dir)]
-      (lucene/add! index (map (partial gen-bookmark user) (db/get-bookmarks user)))
+      (lucene/add! index (map (partial gen-bookmark user) (map :url (db/get-bookmarks user))))
       index)))
 
 (defn- ensure-parent-dir
@@ -74,7 +77,8 @@
               (when (ensure-parent-dir path)
                 (io/copy zip-stream file)))
             (recur (.getNextEntry zip-stream)))))
-    (io/file dest)))
+    (slurp input-stream) ;; TODO ensure the whole stream gets consumed/closed
+    (.getAbsoluteFile (io/file dest))))
 
 (defn- user->key
   "Constructs an index object key for use with s3."
@@ -85,17 +89,21 @@
 (defn- fetch-index-remote
   "Attempts to download a `user`s associated Lucene index stored on AWS S3."
   [user]
+  (info (str "fetching remote index for user: " (:id user)))
   (try
-    nil
     (-> (s3/get-object {:bucket-name "bobo-index" :key (user->key user)})
         (:input-stream)
-        (uncompress-index (str "./index/" (:id user) "/"))
-        (.getAbsolutePath)
+        (uncompress-index (str "./index/" (:id user) "/"))        
         (lucene/disk-index))
-    (catch Exception e
+    (catch AmazonServiceException e
       (let [m (amazonica.core/ex->map e)]
         (when-not (= 404 (:status-code m)) ;; swallow 404s as theyre expected for new users
-          (prn amazonica.core/ex->map e))))))
+          (debug amazonica.core/ex->map e))))
+    (catch Exception e
+      (debug e))))
+
+(def foo (fetch-index-remote {:id 2002}))
+(type foo)
 
 (defn- user->cache-key
   [user]
@@ -146,6 +154,7 @@
   [user urls]
   (let [{userid :id} user
         index (get-index user)]
+    (info (str "deleting " urls " for user " userid))
     (lucene/delete! index (map #(hash-map :id %) urls))
     (sync-store user index)))
 
@@ -164,8 +173,7 @@
             (do (Thread/sleep interval)
                 (try (f)
                      (catch Exception e
-                       ;; TODO logging
-                       (prn e)))))))
+                       (debug e)))))))
 
 (defn- delete-stale-indexes []
   "Purges disk of indexes that were once held in our `[[index-cache]]` but have since been evicted."
@@ -177,10 +185,10 @@
                                    (.listFiles (io/file "./index/"))))]
     (doseq [id (keys disk-indexes)]
       (when-not (cache/has? index-cache id)
-        (println (str "deleting stale index: " id))
+        (info (str "deleting stale index: " id))
         (delete-dir (get disk-indexes id))))))
 
-(comment (def index-reaper
-   "Runs `[[delete-stale-indexes]]` in a background thread every twenty minutes."
-           (run-at-interval delete-stale-indexes 60000)))
+(def ^:private index-reaper
+  "Runs `[[delete-stale-indexes]]` in a background thread every twenty minutes."
+  (run-at-interval delete-stale-indexes (* 1000 60 20)))
 

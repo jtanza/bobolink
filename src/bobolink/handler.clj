@@ -3,11 +3,15 @@
   (:require [clojure.string :as str]
             [compojure.core :refer :all]
             [compojure.route :as route]
+            [ring.logger :as logger]
             [ring.middleware.basic-authentication :refer [wrap-basic-authentication]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
-            [ring.util.response :as response]
-            [bobolink.api :as api]))
+            [ring.util.response :as response]ssss
+            [bobolink.api :as api]
+            [bobolink.db :as db]
+            [taoensso.timbre :as timbre]
+            [taoensso.timbre.appenders.core :as appenders]))
 
 (defn- decode-auth
   "Parses a Base64 encoded string into a map containing the provided `:email` and `:auth`
@@ -26,33 +30,41 @@
       (last)
       (decode-auth)))
 
-(defn- get-same-user
-  "Attempts to return an email value from a user's request iff it matches
-  their provided authentication, nil otherwise."
-  [req]
-  (let [email (:email (get-auth req))]
-    (if (= email (get-in req [:params :email]))
-      email)))
+(defn- is-same-user
+  "Determines whether the authenticated user present in `req` is
+  equal to `user`."
+  [user req]
+  (let [auth-email (:email (get-auth req))]    
+    (if-some [email (:email user)]
+      (= email auth-email)
+      (if-some [id (:id user)]
+        (if-some [existing-user (db/get-user {:id id})]
+          (== (Integer/parseInt id) (:id existing-user)))))))
 
 (defroutes protected-routes
-  (GET "/users/:userid/bookmarks" [userid]
-       (api/get-bookmarks userid))
   (POST "/bookmarks" req
-       (api/add-bookmarks (:email (get-auth req)) (get-in req [:body :urls])))
+        (api/add-bookmarks (:email (get-auth req)) (get-in req [:body :urls])))
   (DELETE "/bookmarks" req
           (api/delete-bookmarks (:email (get-auth req)) (get-in req [:body :urls])))
   (POST "/bookmarks/search" req
         (api/search-bookmarks (:email (get-auth req)) (:body req)))
+  (GET "/users/:id/bookmarks" [id :as req]
+       (if (is-same-user {:id id} req)
+         (api/get-bookmarks id)
+         (response/status 200)))
+  (GET "/users/:id" [id :as req]
+       (if (is-same-user {:id id} req)
+         (api/get-user {:id id})
+         (response/status 200)))
   (POST "/users/search" req
-       (if-let [email (get-same-user req)] 
-         (api/get-user {:email email})
-         (response/not-found "Not Found")))
-  (GET "/users/:id" [id]
-       (api/get-user {:id id}))
+        (let [email (get-in req [:body :email])
+              user {:email email}]
+          (if (is-same-user user req)
+            (api/get-user user)
+            (response/status 200))))
   (route/not-found "Not Found"))
 
 (defroutes public-routes
-  ;; TODO handle already created users
   (POST "/users" req
         (api/add-user (:body req)))
   (GET "/token" req
@@ -62,11 +74,19 @@
   [userid token]
   (api/authenticated? userid token))
 
+(def ^:private log-config
+  (timbre/merge-config!
+   {:appenders {:spit (appenders/spit-appender {:fname "./log/api.log"})}}))
+
 (defroutes handler
   public-routes
   (wrap-basic-authentication protected-routes authenticated?))
 
 (def app
   (-> (wrap-defaults handler api-defaults)
+      (logger/wrap-log-response {:log-fn (fn [{:keys [level throwable message]}]
+                                           (timbre/log level throwable message))})
       (wrap-json-body {:keywords? true})
       (wrap-json-response)))
+
+
