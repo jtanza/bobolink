@@ -7,7 +7,7 @@
             [ring.middleware.basic-authentication :refer [wrap-basic-authentication]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
-            [ring.util.response :as response]ssss
+            [ring.util.response :as response]
             [bobolink.api :as api]
             [bobolink.db :as db]
             [taoensso.timbre :as timbre]

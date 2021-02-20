@@ -52,8 +52,8 @@
   (cond
     (some str/blank? [(:email creds) (:password creds)]) "email or password missing"
     (not (re-matches #"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$" (:email creds))) "invalid email address"
-    (not (re-matches #"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$" (:password creds)))
-    "password must be minimum eight characters, have at least one uppercase letter, one lowercase letter, one number and one special character"
+    (not (re-matches #"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]*)[A-Za-z\d@$!%*?&]{8,}$" (:password creds)))
+    "password must be minimum eight characters, have at least one uppercase letter, one lowercase letter, and one number"
     (seq (db/get-user (update creds :email str/lower-case))) "username taken"))
 
 (defn add-user
