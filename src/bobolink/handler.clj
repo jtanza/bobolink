@@ -41,22 +41,26 @@
         (if-some [existing-user (db/get-user {:id id})]
           (== (Integer/parseInt id) (:id existing-user)))))))
 
+(defn- with-version
+  [route]
+  (str "/v1/" route))
+
 (defroutes protected-routes
-  (POST "/bookmarks" req
+  (POST (with-version "bookmarks") req
         (api/add-bookmarks (:email (get-auth req)) (get-in req [:body :urls])))
-  (DELETE "/bookmarks" req
+  (DELETE (with-version "bookmarks") req
           (api/delete-bookmarks (:email (get-auth req)) (get-in req [:body :urls])))
-  (POST "/bookmarks/search" req
+  (POST (with-version "bookmarks/search") req
         (api/search-bookmarks (:email (get-auth req)) (:body req)))
-  (GET "/users/:id/bookmarks" [id :as req]
+  (GET (with-version "users/:id/bookmarks") [id :as req]
        (if (is-same-user {:id id} req)
          (api/get-bookmarks id)
          (response/status 200)))
-  (GET "/users/:id" [id :as req]
+  (GET (with-version "users/:id") [id :as req]
        (if (is-same-user {:id id} req)
          (api/get-user {:id id})
          (response/status 200)))
-  (POST "/users/search" req
+  (POST (with-version "users/search") req
         (let [email (get-in req [:body :email])
               user {:email email}]
           (if (is-same-user user req)
@@ -65,9 +69,9 @@
   (route/not-found "Not Found"))
 
 (defroutes public-routes
-  (POST "/users" req
+  (POST (with-version "users") req
         (api/add-user (:body req)))
-  (GET "/token" req
+  (GET (with-version "token") req
        (api/get-token (get-auth req))))
 
 (defn authenticated?
