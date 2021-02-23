@@ -13,26 +13,14 @@
             [taoensso.timbre :as timbre
              :refer [debug info]]))
 
-(def ^:private stop-words (-> "stop-words" io/resource slurp str/split-lines set))
-
-(defn- remove-stopwords
-  "Removes common english stopwords from the provided `text`."
-  [text]
-  (clojure.set/difference text stop-words))
-
 (defn- extract-text
   "Attempts to download the HTML located at `url` returning all text in the document."
   [url]
-  (-> url slurp Jsoup/parse .body .text (str/split #" ") set))
-
-(defn- get-content
-  "Downloads and massages the text located at `url` for use as the content in a user's stored bookmark."
-  [url]
-  (->> url extract-text remove-stopwords (str/join " ")))
+  (-> url slurp Jsoup/parse .body .text))
 
 (defn gen-bookmark
   [user url]
-  (if-not (empty? url) (hash-map :userid (:id user) :url url :content (get-content url))))
+  (if-not (empty? url) (hash-map :userid (:id user) :url url :content (extract-text url))))
 
 (def ^:private index-cache
   "In memory cache holding our active Lucene indexes."
@@ -102,9 +90,6 @@
     (catch Exception e
       (debug e))))
 
-(def foo (fetch-index-remote {:id 2002}))
-(type foo)
-
 (defn- user->cache-key
   [user]
   (keyword (str (:id user))))
@@ -138,6 +123,7 @@
     (s3/put-object {:bucket-name "bobo-index"
                     :key (user->key user)
                     :file (compress-index index user)})
+    (info (str "wrote index file to remote for user " (:email user)))
     (io/delete-file index-file true)))
 
 (defn save-bookmarks
@@ -177,6 +163,7 @@
 
 (defn- delete-stale-indexes []
   "Purges disk of indexes that were once held in our `[[index-cache]]` but have since been evicted."
+  (info "pruning stale indexes...")
   (let [disk-indexes (into {} (map #(let [path (.toString %)]
                                       ;; grab userid from index path
                                       (-> (subs path (inc (str/last-index-of path "/")) (count path))
@@ -189,6 +176,5 @@
         (delete-dir (get disk-indexes id))))))
 
 (def ^:private index-reaper
-  "Runs `[[delete-stale-indexes]]` in a background thread every twenty minutes."
-  (run-at-interval delete-stale-indexes (* 1000 60 20)))
-
+  "Runs `[[delete-stale-indexes]]` in a background thread every ten minutes."
+  (run-at-interval delete-stale-indexes (* 1000 60 10)))
