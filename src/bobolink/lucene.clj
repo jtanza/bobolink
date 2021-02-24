@@ -75,7 +75,7 @@
                   (let [name (.name field)
                         value (.stringValue field)]
                     (if (= "content" name)
-                      [name (str/join " ... " (seq (.getBestFragments highlighter analyzer name value 2)))]
+                      [name (str/join "... " (seq (.getBestFragments highlighter analyzer name value 2)))]
                       [name value])))
                 (.getFields doc))))
 

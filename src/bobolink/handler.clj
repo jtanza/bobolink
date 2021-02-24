@@ -8,6 +8,7 @@
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
             [ring.util.response :as response]
+            [ring.middleware.ratelimit :refer [wrap-ratelimit ip-limit]]
             [bobolink.api :as api]
             [bobolink.db :as db]
             [taoensso.timbre :as timbre]
@@ -90,6 +91,7 @@
   (-> (wrap-defaults handler api-defaults)
       (logger/wrap-log-response {:log-fn (fn [{:keys [level throwable message]}]
                                            (timbre/log level throwable message))})
+      (wrap-ratelimit {:limits [(ip-limit 100)]})
       (wrap-json-body {:keywords? true})
       (wrap-json-response)))
 

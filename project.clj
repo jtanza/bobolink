@@ -18,7 +18,8 @@
                  [ring-logger "1.0.1"]
                  [ring/ring-core "1.8.2"]
                  [ring/ring-defaults "0.3.2"]
-                 [ring/ring-json "0.5.0"]]
+                 [ring/ring-json "0.5.0"]
+                 [ring-ratelimit "0.2.2"]]
   :plugins [[lein-ring "0.12.5"]]
   :ring {:handler bobolink.handler/app}
   :profiles
