@@ -6,6 +6,7 @@
             [bobolink.search :as search]
             [clojure.string :as str]
             [crypto.password.bcrypt :as password]
+            [postal.core :as postal]
             [ring.util.response :as response]
             [taoensso.timbre :as timbre
              :refer [debug info]]))
@@ -51,20 +52,25 @@
   [creds]
   (cond
     (some str/blank? [(:email creds) (:password creds)]) "email or password missing"
+    ;; https://xkcd.com/208/
     (not (re-matches #"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$" (:email creds))) "invalid email address"
     (not (re-matches #"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]*)[A-Za-z\d@$!%*?&]{8,}$" (:password creds)))
     "password must be minimum eight characters, have at least one uppercase letter, one lowercase letter, and one number"
-    (seq (db/get-user (update creds :email str/lower-case))) "username taken"))
+    (and (:new-user creds) (seq (db/get-user (update creds :email str/lower-case)))) "username taken"))
 
+;; TODO update doc
 (defn add-user
   "Creates a new bobolink user."
-  [creds]
-  (if-some [invalid-reason (validate-creds creds)]
+  ([creds]
+   (add-user (assoc creds :new-user true) db/create-user #(response/created (str "/users/" (:id %)))))
+  ([creds add resp]
+   (if-some [invalid-reason (validate-creds creds)]
     (response/bad-request invalid-reason)
-    (let [user (db/create-user (-> creds
-                                   (update :password password/encrypt)
-                                   (update :email str/lower-case)))]
-      (response/created (str "/users/" (:id user))))))
+    (let [user (add (-> creds
+                        (update :password password/encrypt)
+                        (update :email str/lower-case)
+                        (select-keys [:email :password])))]
+      (resp user)))))
 
 (defn get-bookmarks
   [userid]
@@ -113,4 +119,41 @@
     (catch Exception e
       (debug e)
       (response/status (assoc resp :body (str "Error searching bookmarks: " (.getMessage e))) 500))))
+
+(defmulti reset-password
+  (fn [req] (sort (keys req))))
+
+(defn- send-mail
+  [recip content]
+  (postal/send-message {:host ""
+                        :user ""
+                        :pass ""
+                        :port 587
+                        :tls true}
+                       {:from ""
+                        :to [recip]
+                        :subject (:subject content)
+                        :body (:body content)}))
+
+(defmethod reset-password '(:email) [req]
+  (if-some [user (db/get-user (select-keys req [:email]))]
+    (try
+      (let [email (:email user)
+            send-resp (send-mail email {:subject "Password Reset Request" :body ""})]
+        (response/status (assoc resp :body (str "Email sent to " email)) 202))
+      (catch Exception e
+        (debug e)
+        (response/status (assoc resp :body (str "Error sending mail: " (.getMessage e))) 500)))
+    (response/not-found "")))
+
+(defmethod reset-password '(:email :new :token) [req]
+  (let [user (db/get-user (select-keys req [:email]))
+        reset-token (db/get-reset-token user)]
+    (if (and (seq reset-token)
+             (= reset-token (select-keys req [:token])))
+      (add-user (assoc user :password (:new req)) db/update-user (constantly (response/status 204)))
+      (response/bad-request "Invalid reset token"))))
+
+(defmethod reset-password :default [req]
+  (response/bad-request (str "Invalid fields: " (seq (map name (keys req))))))
 

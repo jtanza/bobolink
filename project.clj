@@ -10,6 +10,7 @@
                  [compojure "1.6.1"]
                  [crypto-password "0.2.1"]
                  [com.taoensso/timbre "5.1.2"]
+                 [com.draines/postal "2.0.4"]
                  [org.apache.lucene/lucene-core "8.8.0"]
                  [org.apache.lucene/lucene-highlighter "8.8.0"]
                  [org.jsoup/jsoup "1.7.3"]

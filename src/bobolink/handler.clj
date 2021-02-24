@@ -73,7 +73,9 @@
   (POST (with-version "users") req
         (api/add-user (:body req)))
   (GET (with-version "token") req
-       (api/get-token (get-auth req))))
+       (api/get-token (get-auth req)))
+  (PUT (with-version "users/account/password") req
+       (api/reset-password (:body req))))
 
 (defn authenticated?
   [userid token]

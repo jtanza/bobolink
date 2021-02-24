@@ -7,6 +7,10 @@
   [user]
   (first (jdbc/insert! db-spec :bobouser user)))
 
+(defn update-user
+  [user]
+  (jdbc/update! db-spec :bobouser {:email (:email user) :password (:password user)} ["id = ?" (:id user)]))
+
 (defn get-user
   "Returns the user represented by `creds` in the DB.
   `creds` should be a map containing either a user's email or id"
@@ -51,4 +55,13 @@
 (defn get-bookmarks
   [user]
   (jdbc/query db-spec ["select url from bookmark where userid = ?" (:id user)]))
+
+(defn get-reset-token
+  [user]
+  (first (jdbc/query db-spec ["select token from reset_token where userid = ? and expires > now()" (:id user)])))
+
+(defn set-reset-token
+  [user token]
+  (jdbc/execute! db-spec ["insert into reset_token values (?, ?, NOW() + INTERVAL '4 HOURS') on conflict (userid) do update set token = excluded.token, expires = excluded.expires"
+                          (:id user) token]))
 

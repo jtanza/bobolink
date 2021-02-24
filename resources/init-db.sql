@@ -15,5 +15,11 @@ create table if not exists bookmark (
     unique (userid, url)
 );
 
+create table if not exists reset_token (
+    userid  integer references bobouser (id) not null unique,
+    token   varchar not null,
+    expires timestamp not null
+);
+
 create index on bookmark (userid);
 

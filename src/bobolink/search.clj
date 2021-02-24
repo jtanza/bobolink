@@ -16,7 +16,7 @@
 (defn- extract-text
   "Attempts to download the HTML located at `url` returning all text in the document."
   [url]
-  (-> url slurp Jsoup/parse .body .text))
+  (-> url slurp Jsoup/parse (.select "p") .text (str/replace #"[^a-zA-Z0-9 -]" "")))
 
 (defn gen-bookmark
   [user url]
