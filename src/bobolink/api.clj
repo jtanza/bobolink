@@ -149,9 +149,9 @@
 (defmethod reset-password '(:email :new :token) [req]
   (let [user (db/get-user (select-keys req [:email]))
         reset-token (db/get-reset-token user)]
-    (if (and (seq reset-token)
-             (= reset-token (select-keys req [:token])))
-      (add-user (assoc user :password (:new req)) db/update-user (constantly (response/status 204)))
+    (if (and (seq reset-token) (= reset-token (select-keys req [:token])))
+      (do (add-user (assoc user :password (:new req)) db/update-user (constantly (response/status 204)))
+          (db/destroy-auth-token user))
       (response/bad-request "Invalid reset token"))))
 
 (defmethod reset-password :default [req]
