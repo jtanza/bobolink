@@ -9,6 +9,7 @@
 /db
 .lein-repl-history
 notes.txt
+conf.edn
 
 # Test binary, built with `go test -c`
 *.test

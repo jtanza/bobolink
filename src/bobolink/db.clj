@@ -62,11 +62,18 @@
   (jdbc/query db ["select url from bookmark where userid = ?" (:id user)]))
 
 (defn get-reset-token
+  "Returns a user's previously generated password reset token.
+  Only returns non-expired tokens, regardless of whether or not a row may exist for the `user`."
   [user]
   (first (jdbc/query db ["select token from reset_token where userid = ? and expires > now()" (:id user)])))
 
 (defn set-reset-token
   [user token]
-  (jdbc/execute! db ["insert into reset_token values (?, ?, NOW() + INTERVAL '4 HOURS') on conflict (userid) do update set token = excluded.token, expires = excluded.expires"
+  (jdbc/execute! db ["insert into reset_token values (?, ?, NOW() + INTERVAL '2 HOURS') on conflict (userid) do update set token = excluded.token, expires = excluded.expires"
                           (:id user) token]))
+
+(defn destroy-reset-token
+  [user]
+  (when (seq user)
+    (jdbc/delete! db :reset_token ["userid = ?" (:id user)])))
 
