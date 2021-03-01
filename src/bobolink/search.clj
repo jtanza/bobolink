@@ -34,7 +34,7 @@
       (delete-dir f)))
   (io/delete-file file))
 
-(defn ^:private index-dir "/opt/bobolink/index/")
+(def ^:private index-dir "/opt/bobolink/index/")
 
 (defn- build-index
   "Attempts to build a Lucene index from a `user`s saved bookmarks."
