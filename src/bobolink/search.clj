@@ -34,10 +34,12 @@
       (delete-dir f)))
   (io/delete-file file))
 
+(defn ^:private index-dir "/opt/bobolink/index/")
+
 (defn- build-index
   "Attempts to build a Lucene index from a `user`s saved bookmarks."
   [user]
-  (let [dir (io/file (str "./index/" (:id user)))]
+  (let [dir (io/file (str index-dir (:id user)))]
     (when (.exists dir)
       (delete-dir dir))
     (let [index (lucene/disk-index dir)]
@@ -81,7 +83,7 @@
   (try
     (-> (s3/get-object {:bucket-name "bobo-index" :key (user->key user)})
         (:input-stream)
-        (uncompress-index (str "./index/" (:id user) "/"))        
+        (uncompress-index (str index-dir (:id user) "/"))
         (lucene/disk-index))
     (catch AmazonServiceException e
       (let [m (amazonica.core/ex->map e)]
@@ -169,7 +171,7 @@
                                       (-> (subs path (inc (str/last-index-of path "/")) (count path))
                                           (keyword)
                                           (vector %)))
-                                   (.listFiles (io/file "./index/"))))]
+                                   (.listFiles (io/file index-dir))))]
     (doseq [id (keys disk-indexes)]
       (when-not (cache/has? index-cache id)
         (info (str "deleting stale index: " id))

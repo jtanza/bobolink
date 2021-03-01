@@ -83,7 +83,7 @@
 
 (def ^:private log-config
   (timbre/merge-config!
-   {:appenders {:spit (appenders/spit-appender {:fname "./log/api.log"})}}))
+   {:appenders {:spit (appenders/spit-appender {:fname "/var/log/bobolink/api.log"})}}))
 
 (defroutes handler
   public-routes
