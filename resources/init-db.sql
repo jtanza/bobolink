@@ -11,7 +11,7 @@ create table if not exists token (
 
 create table if not exists bookmark (
     userid integer references bobouser (id) not null,
-    url    varchar not null
+    url    varchar not null,
     unique (userid, url)
 );
 

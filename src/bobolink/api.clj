@@ -4,6 +4,7 @@
            (java.util Base64))
   (:require [bobolink.db :as db]
             [bobolink.search :as search]
+            [bobolink.util :as util]
             [clojure.string :as str]
             [crypto.password.bcrypt :as password]
             [postal.core :as postal]
@@ -125,16 +126,6 @@
       (debug e)
       (response/status (assoc resp :body (str "Error searching bookmarks: " (.getMessage e))) 500))))
 
-(defn- load-edn
-  [source]
-  (try
-    (with-open [r (clojure.java.io/reader source)]
-      (clojure.edn/read (java.io.PushbackReader. r)))
-    (catch Exception e
-      (debug e))))
-
-(def ^:private conf (load-edn "conf.edn"))
-
 (defn- send-mail
   ([content]
    (send-mail content "no-reply@bobolink.me"))
@@ -142,8 +133,8 @@
    (let [{:keys [to subject body]} content]
     (info (str "sending email to: " to))
     (postal/send-message {:host "email-smtp.us-east-1.amazonaws.com"
-                          :user (:smtp-username conf)
-                          :pass (:smtp-password conf)
+                          :user (:smtp-username util/conf)
+                          :pass (:smtp-password util/conf)
                           :port 587 :tls true}
                          {:from from :to to
                           :subject subject :body body}))))

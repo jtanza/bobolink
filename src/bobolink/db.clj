@@ -1,7 +1,9 @@
 (ns bobolink.db
-  (:require [clojure.java.jdbc :as jdbc]))
+  (:require [clojure.java.jdbc :as jdbc]
+            [bobolink.util :as util]))
 
-(def ^:private db {:dbtype "postgresql" :dbname "bobodb" :user "bobouser"})
+(def ^:private db {:dbtype "postgresql" :dbname "bobodb"
+                   :user "bobouser" :password (:db-pw util/conf)})
 
 (defn create-user
   [user]
