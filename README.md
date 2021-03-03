@@ -1,7 +1,7 @@
 # bobolink
 
 bobolink helps user's store bookmarks and easily search for them later. In a nutshell, bobolink provides full text search on the HTML documents
-associated with their bookmarks.
+associated with user's bookmarks.
 
 For more information on bobolink in general, users should refer to the documentation hosted on the [website](https://bobolink.me)
 
