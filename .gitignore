@@ -1,22 +1,11 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
+# clj
 /target
-/db
 .lein-repl-history
-notes.txt
+.eastwood
+.lein-failures
 conf.edn
 
-# Test binary, built with `go test -c`
-*.test
+# misc
+/db
+notes.txt
 
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-#

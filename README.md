@@ -1,9 +1,8 @@
 # bobolink
 
-bobolink helps user's store bookmarks and easily search for them later. In a nutshell, bobolink provides full text search on the HTML documents
-associated with user's bookmarks.
+bobolink helps user's store bookmarks and easily search for them later. In a nutshell, bobolink provides full text search on the HTML documents associated with user's bookmarks.
 
-For more information on bobolink in general, users should refer to the documentation hosted on the [website](https://bobolink.me)
+For more information on bobolink in general, users should refer to the documentation hosted on the [website](http://bobolink.me)
 
 This repository houses the API which runs the public instance of the bobolink backend. For user's wishing to use bobolink,
 please refer to the [bobolink-cli](https://github.com/jtanza/bobolink-cli).

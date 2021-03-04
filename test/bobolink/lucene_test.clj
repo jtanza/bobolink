@@ -1,6 +1,6 @@
 (ns bobolink.lucene-test
-  (:use bobolink.lucene
-        clojure.test)
+  (:require [bobolink.lucene :refer :all]
+            [clojure.test :refer :all])
   (:import (org.apache.lucene.store RAMDirectory)))
 
 (deftest lucene

@@ -6,14 +6,16 @@
             [bobolink.search :as search]
             [bobolink.util :as util]
             [clojure.string :as str]
+            [clojure.set :refer [intersection]]
             [crypto.password.bcrypt :as password]
             [postal.core :as postal]
             [ring.util.response :as response]
             [taoensso.timbre :as timbre
              :refer [debug info]]))
 
-(defn- gen-token []
+(defn- gen-token
   "Generates a \"random\" API authtoken."
+  []
   (let [rndm (SecureRandom.)
         base64 (.withoutPadding (Base64/getUrlEncoder))
         buffer (byte-array 32)]
@@ -62,18 +64,18 @@
 
 (defn add-user
   "Creates a new bobolink user.
-  Callers can provide an `add` and `resp` function if they would like to persist the validated
+  Callers can provide an `add` and `format-resp` function if they would like to persist the validated
   user in a manner other than `db/create-user`"
   ([creds]
    (add-user (assoc creds :new-user true) db/create-user #(response/created (str "/users/" (:id %)))))
-  ([creds add resp]
+  ([creds add format-resp]
    (if-some [invalid-reason (validate-creds creds)]
     (response/bad-request invalid-reason)
     (let [user (add (-> creds
                         (update :password password/encrypt)
                         (update :email str/lower-case)
                         (select-keys [:email :password :id])))]
-      (resp user)))))
+      (format-resp user)))))
 
 (defn get-bookmarks
   [userid]
@@ -106,7 +108,7 @@
   [username urls]
   (try
     (let [user (db/get-user {:email username})          
-          to-delete (clojure.set/intersection (set urls) (set (map :url (db/get-bookmarks user))))]
+          to-delete (intersection (set urls) (set (map :url (db/get-bookmarks user))))]
       (if (seq to-delete) ;; don't bother deleting bookmarks that don't exist
         (do (db/delete-bookmarks user to-delete)
             (search/delete-bookmarks user to-delete)

@@ -1,7 +1,7 @@
 (ns bobolink.search-test
-  (:use bobolink.search
-        clojure.test)
-  (:require [amazonica.aws.s3 :as s3]))
+  (:require [bobolink.search :refer :all]
+            [clojure.test :refer :all]
+            [amazonica.aws.s3 :as s3]))
 
 (deftest search
   (testing "gen-bookmark"

@@ -7,6 +7,7 @@
   (:require [bobolink.db :as db]
             [bobolink.lucene :as lucene]
             [amazonica.aws.s3 :as s3]
+            [amazonica.core :as amazonica]
             [clojure.core.cache.wrapped :as cache]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -86,9 +87,9 @@
         (uncompress-index (str index-dir (:id user) "/"))
         (lucene/disk-index))
     (catch AmazonServiceException e
-      (let [m (amazonica.core/ex->map e)]
+      (let [m (amazonica/ex->map e)]
         (when-not (= 404 (:status-code m)) ;; swallow 404s as theyre expected for new users
-          (debug amazonica.core/ex->map e))))
+          (debug amazonica/ex->map e))))
     (catch Exception e
       (debug e))))
 
@@ -163,8 +164,9 @@
                      (catch Exception e
                        (debug e)))))))
 
-(defn- delete-stale-indexes []
+(defn- delete-stale-indexes
   "Purges disk of indexes that were once held in our `[[index-cache]]` but have since been evicted."
+  []
   (info "pruning stale indexes...")
   (let [disk-indexes (into {} (map #(let [path (.toString %)]
                                       ;; grab userid from index path

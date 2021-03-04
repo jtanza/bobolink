@@ -1,6 +1,6 @@
 (ns bobolink.api-test
-  (:use bobolink.api
-        clojure.test))
+  (:require [bobolink.api :refer :all]
+            [clojure.test :refer :all]))
 
 (deftest api
   (testing "add-user"
