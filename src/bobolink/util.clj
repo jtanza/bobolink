@@ -5,6 +5,7 @@
              :refer [debug]]))
 
 (defn load-edn
+  "Reads in an `.edn` file located on disk at `source`"
   [source]
   (try
     (with-open [r (io/reader source)]

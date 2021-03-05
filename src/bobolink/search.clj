@@ -25,7 +25,7 @@
 
 (def ^:private index-cache
   "In memory cache holding our active Lucene indexes."
-  (cache/lru-cache-factory {}))
+  (cache/lru-cache-factory {} :threshold 103))
 
 (defn- delete-dir
   "Recursively deletes the directory located at `file`."
