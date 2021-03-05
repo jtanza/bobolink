@@ -1,104 +1,53 @@
-# Bobolink
-Bobolink is a small tool that allows you to save links and search for them later. More specifically, Bobolink provides full text search on the body of HTML documents that you've added to your index. Bobolink is written in go. The frontend to the web service is written with go html templates and [vanilla js](http://vanilla-js.com/)
+# bobolink
 
-### Installation
+bobolink helps user's store bookmarks and easily search for them later. In a nutshell, bobolink provides full text search on the HTML documents associated with user's bookmarks.
 
-`go get -u github.com/jtanza/bobolink` 
+For more information on bobolink in general, users should refer to the documentation hosted on the [website](http://bobolink.me)
 
-Bobolink requires an index to manage stored text. The path to this index can either be passed explicitly with each invocation of bobolink e.g.`--index-path /opt/bobolink` or can be set once via the env variable `BOBOLINK_DIR=/opt/bobolink`
+This repository houses the API which runs the public instance of the bobolink backend. For user's wishing to use bobolink,
+please refer to the [bobolink-cli](https://github.com/jtanza/bobolink-cli).
 
-This directory can of course be anywhere you'd like, but I personally use `/opt/bobolink`.
+### Running Locally
 
-### Usage
+Running bobolink locally requires some minor adjustments to account for the local environment. User's will also need to 
+install some prerequistes before starting:
+
+Users will need both Java and [Leiningen](https://github.com/technomancy/leiningen) 2.0.0 or above installed in order to run locally.
+
+A running postgres instance is needed as well. User's should refer to the [init-db.clj](https://github.com/jtanza/bobolink/blob/client-server/resources/init-db.sql) file for schema information and
+[db.clj](https://github.com/jtanza/bobolink/blob/client-server/src/bobolink/db.clj) for additional info on connection values.
+
+It will also be necessary for users to have an AWS account and have it configured locally in order for bobolink to access
+the AWS API. There are a number of ways this can be achieved (e.g. `aws configure`). User's should refer to AWS docs for 
+more info. Keep in mind bobolink will write to `s3://bobo-index/` in the users AWS account. S3 is the only AWS service used.
+
+To start the web server for the application, run:
+
 ```
-Usage:
-  bobolink [flags]
-  bobolink [command]
-
-Available Commands:
-  add         Adds urls to store
-  find        Searches for urls
-  help        Help about any command
-  remove      Deletes urls from store
-  server      Starts the bobolink web server
-
-Flags:
-  -h, --help                help for bobolink
-  -i, --index-path string   path to bobolink index
-
-Use "bobolink [command] --help" for more information about a command.
+$ lein ring server-headless
 ```
 
-#### Some Examples
+User's can now clone into the user [cli](https://github.com/jtanza/bobolink-cli). Once doing so, it will be necessary to export the [api url environment](https://github.com/jtanza/bobolink-cli/blob/master/bobolink/api.py#L5) variable in order to point the cli at their locally running server, i.e.:
+
 ```
-$ # adding new links is easy
-$ bobolink --index-path /opt/bobolink add https://web.stanford.edu/class/cs101/bits-gigabytes.html
-$ successfully added 1 resource\s to index.
-
-$ # search your saved bookmarks. matching text is highlighted in the terminal (can't be seen here)
-$ bobolink --index-path /opt/bobolink find tera*
-
-URL: https://web.stanford.edu/class/cs101/bits-gigabytes.html
-Match: …ytes Gigabytes Terabytes Kilobytes Megabytes Gigabytes Terabytes The size of information in the computer is measured in kilobytes, megabytes, gigabytes, and terabytes. In this section, we'll look at c…
-
-$ # set env var to avoid having to pass --index-path with each invocation
-$ export BOBOLINK_DIR=/opt/bobolink
-
-$ # backup all your bookmarked urls
-$ bobolink add https://en.wikipedia.org/wiki/Protection_ring
-$ bobolink find --all >> bookmarks.txt && cat bookmarks.txt
-https://en.wikipedia.org/wiki/Protection_ring
-https://web.stanford.edu/class/cs101/bits-gigabytes.html
-
-$ bobolink remove https://web.stanford.edu/class/cs101/bits-gigabytes.html
-$ bobolink find --all
-https://en.wikipedia.org/wiki/Protection_ring
+$ export BOBO_URL=http://localhost:3000/v1/
 ```
 
-### Web App
-If users do not wish to use bobolink via the CLI or would like to offload the requisite disk space needed for the document index to a remote server, a web interface is also provided. One can simply run:
-```
-user@remote $ bobolink server -p 25000
-Listening on port :2500...
-user@local $ ssh -L 8080:localhost:25000 user@remote -N
-```
-and access the web app in their browser. 
-
-Please note that because the static files used on the frontend are not packaged with the bobolink executable, in order to run the web app it is necessary to install bobolink manually, i.e. clone the repo into `$GOPATH/src` and `go install`.
-
-##### Web App Screenshots
-
-![Search](doc/screenshots/search.png)
-
-
-![Delete](doc/screenshots/delete.png)
+That's it. Refer to the [cli](https://github.com/jtanza/bobolink-cli) for additional info on usage.
 
 ### API
-All the commands offered in the CLI are likewise offered over HTTP, "Restfully": 
-```
-$ bobolink find hash
-URL: https://xlinux.nist.gov/dads/HTML/secondaryClustering.html
-Match: …to create long run of filled slots away from a key hash position, e.g., along the probe sequence. 
-See also primary clustering, clustering free, hash table, open addressing, clustering, linear probing,…
 
-$ curl -d '{"query": "hash"}' localhost:8080/links/find
-[{"Body":"...to create long run of filled slots away from a key hash position, e.g., along the probe sequence. 
-See also primary clustering, clustering free, hash table, open addressing, clustering, linear probing...,",
-"URL":"https://xlinux.nist.gov/dads/HTML/secondaryClustering.html"}]
-```
+The bobolink API consists of the basic CRUD operations around bookmark/user creation. User's wishing for more information
+on the available endpoints and their payloads should consult [handler.clj](https://github.com/jtanza/bobolink/blob/client-server/src/bobolink/handler.clj) and [api.clj](https://github.com/jtanza/bobolink/blob/client-server/src/bobolink/api.clj). 
+	
+### Some Notes
 
-All endpoints return data as JSON. However, if HTML is desired, once can simply request it.
-```
-$ curl -H "Accept: text/html" -d '{"query": "hash"}' localhost:8080/links/find
-<ul>
-  <li><a href="https://xlinux.nist.gov/dads/HTML/secondaryClustering.html">xlinux.nist.gov</a></li>
-  <li>…to create long run of filled slots away from a key <mark>hash</mark>; position, e.g., along the probe sequence. See also primary clustering, clustering free, <mark>hash</mark>; table, open addressing, clustering, linear probing,…</li>
-</ul>
-```
+bobolink uses [Lucene](https://lucene.apache.org/) to store and search the HTML documents associated with user's stored bookmarks. 
+Lucene indexes are cached locally for active users and persisted to AWS S3 for permanent storage. Indexes are written
+to disk in `/opt/bobolink`. These files are periodically purged by a background thread when the memory representation of
+the index has been evicted from our cache.
 
-### Motivation
-I save lots of links without the use a bookmark manager. When I find a new article I'd like to reference or read at another time, I simply append it to a long-running text file I keep locally. A downside to this approach is that URLs alone often lack adequate detail of the contents into the web page, so grep'ing for an article by some keyword is not always possible. 
 
-Bobolink addresses that: one can simply add URLs, search by some keyword and have returned all articles that mention these terms.
 
-N.B. Bobolink is not a "read-it-later" tool and does not offer any such functionality; searches return snippets of matching text only to highlight where an article matched a user's search query.
+
+
