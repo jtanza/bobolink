@@ -2,8 +2,7 @@
   (:require [clojure.java.jdbc :as jdbc]
             [bobolink.util :as util]))
 
-(def ^:private db {:dbtype "postgresql" :dbname "bobodb"
-                   :user "bobouser" :password (:db-pw util/conf)})
+(def ^:private db {:dbtype "sqlite" :dbname "db/bobodb"})
 
 (defn create-user
   [user]
@@ -33,7 +32,7 @@
   [user token]
   (let [{:keys [id]} user]
     (jdbc/execute! db ["insert into token values (?, ?) on conflict (userid) do update set authtoken = excluded.authtoken"
-                            id token])))
+                       id token])))
 
 (defn get-auth-token
   [user]
@@ -72,7 +71,7 @@
 (defn set-reset-token
   [user token]
   (jdbc/execute! db ["insert into reset_token values (?, ?, NOW() + INTERVAL '2 HOURS') on conflict (userid) do update set token = excluded.token, expires = excluded.expires"
-                          (:id user) token]))
+                     (:id user) token]))
 
 (defn destroy-reset-token
   [user]

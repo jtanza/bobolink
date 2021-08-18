@@ -14,7 +14,7 @@
                  [org.apache.lucene/lucene-core "8.8.0"]
                  [org.apache.lucene/lucene-highlighter "8.8.0"]
                  [org.jsoup/jsoup "1.7.3"]
-                 [org.postgresql/postgresql "42.1.4"]
+                 [org.xerial/sqlite-jdbc "3.36.0.1"]
                  [ring-basic-authentication "1.1.0"]
                  [ring-logger "1.0.1"]
                  [ring/ring-core "1.8.2"]

@@ -1,5 +1,5 @@
 create table if not exists bobouser (
-    id       serial primary key, 
+    id       integer primary key,
     email    varchar not null unique,
     password varchar not null
 );
@@ -21,5 +21,5 @@ create table if not exists reset_token (
     expires timestamp not null
 );
 
-create index on bookmark (userid);
 
+create index bmark_index on bookmark (userid);
